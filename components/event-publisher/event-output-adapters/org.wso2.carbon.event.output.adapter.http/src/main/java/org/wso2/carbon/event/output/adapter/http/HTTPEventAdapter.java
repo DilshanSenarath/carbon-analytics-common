@@ -17,8 +17,6 @@
 */
 package org.wso2.carbon.event.output.adapter.http;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import org.apache.axiom.om.util.Base64;
 import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.HttpClient;
@@ -38,8 +36,6 @@ import org.wso2.carbon.event.output.adapter.core.exception.ConnectionUnavailable
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterException;
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterRuntimeException;
 import org.wso2.carbon.event.output.adapter.core.exception.TestConnectionNotSupportedException;
-import org.wso2.carbon.event.output.adapter.http.internal.model.Event;
-import org.wso2.carbon.event.output.adapter.http.internal.model.ReceivedEvent;
 import org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants;
 import org.wso2.carbon.identity.secret.mgt.core.exception.SecretManagementException;
 import org.wso2.carbon.utils.CarbonUtils;

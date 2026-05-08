@@ -51,9 +51,6 @@ public class HTTPEventAdapterConstants {
     public static final String ADAPTER_SECRET_PROVIDER = "http.secret.provider";
     public static final String ADAPTER_SECRET_PROVIDER_HINT = "Provider identifier for secret management. " +
             "Defaults to EMAIL_PROVIDER if not set.";
-    public static final String ADAPTER_PUBLISH_EVENT_PAYLOAD_ONLY = "http.publishEventPayloadOnly";
-    public static final String ADAPTER_PUBLISH_EVENT_PAYLOAD_ONLY_HINT = "If enabled, only the event payload will " +
-            "be published to the endpoint, otherwise the entire event will be published.";
     public static final String HEADER_SEPARATOR = ",";
     public static final String ENTRY_SEPARATOR = ":";
     public static final String ADAPTER_HTTP_CLIENT_METHOD = "http.client.method";
