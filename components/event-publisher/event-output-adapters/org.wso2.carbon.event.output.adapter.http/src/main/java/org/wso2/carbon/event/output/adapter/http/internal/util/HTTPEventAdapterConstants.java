@@ -116,5 +116,5 @@ public class HTTPEventAdapterConstants {
 
 
     // Default value.
-    public static final String DEFAULT_SECRET_PROVIDER = "EMAIL_PROVIDER";
+    public static final String DEFAULT_SECRET_PROVIDER = EMAIL_PROVIDER;
 }
