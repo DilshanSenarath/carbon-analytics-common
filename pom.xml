@@ -773,7 +773,7 @@
         <wso2.slf4j.version>1.5.10.wso2v1</wso2.slf4j.version>
         <equinox.osgi.services.version>3.5.100.v20160504-1419</equinox.osgi.services.version>
 
-        <pax.logging.log4j2.version>2.2.9-wso2v2</pax.logging.log4j2.version>
+        <pax.logging.log4j2.version>2.2.9-wso2v3</pax.logging.log4j2.version>
         <apache.felix.gogo.command.version>0.10.0.v201209301215</apache.felix.gogo.command.version>
         <apache.felix.gogo.runtime.version>0.10.0.v201209301036</apache.felix.gogo.runtime.version>
         <apache.felix.gogo.shell.version>0.10.0.v201212101605</apache.felix.gogo.shell.version>
@@ -861,7 +861,7 @@
         <carbon.messaging.version>3.0.3</carbon.messaging.version>
         <carbon.messaging.package.import.version.range>[0.0.0, 4.0.0)</carbon.messaging.package.import.version.range>
 
-        <msf4j.version>2.8.14-SNAPSHOT</msf4j.version>
+        <msf4j.version>2.9.0</msf4j.version>
         <msf4j.import.version.range>[2.5.0, 3.0.0)</msf4j.import.version.range>
 
         <com.fasterxml.jackson.annotations.version>2.21</com.fasterxml.jackson.annotations.version>
