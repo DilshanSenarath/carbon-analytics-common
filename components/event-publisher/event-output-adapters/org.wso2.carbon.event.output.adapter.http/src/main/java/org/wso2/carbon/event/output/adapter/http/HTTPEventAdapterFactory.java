@@ -106,6 +106,13 @@ public class HTTPEventAdapterFactory extends OutputEventAdapterFactory {
         apiKeyValue.setSecured(true);
         apiKeyValue.setEncrypted(true);
 
+        Property providerProp = new Property(HTTPEventAdapterConstants.ADAPTER_SECRET_PROVIDER);
+        providerProp.setDisplayName(HTTPEventAdapterConstants.ADAPTER_SECRET_PROVIDER);
+        providerProp.setHint(HTTPEventAdapterConstants.ADAPTER_SECRET_PROVIDER_HINT);
+        providerProp.setRequired(false);
+        providerProp.setDefaultValue(HTTPEventAdapterConstants.DEFAULT_SECRET_PROVIDER);
+
+        staticPropertyList.add(providerProp);
         staticPropertyList.add(proxyHostProp);
         staticPropertyList.add(proxyPortProp);
         staticPropertyList.add(clientMethod);

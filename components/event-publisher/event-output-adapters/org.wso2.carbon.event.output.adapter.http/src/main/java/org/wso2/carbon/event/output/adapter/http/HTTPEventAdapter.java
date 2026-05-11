@@ -67,10 +67,11 @@ import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventA
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.API_KEY_VALUE;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.BASIC;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.BEARER;
+import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.ADAPTER_SECRET_PROVIDER;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.CLIENT_CREDENTIAL;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.CLIENT_ID;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.CLIENT_SECRET;
-import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.EMAIL_PROVIDER;
+import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.DEFAULT_SECRET_PROVIDER;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.INTERNAL_ACCESS_TOKEN;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.LogConstants.ActionIDs.SEND_EMAIL;
 import static org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants.LogConstants.EMAIL_PUBLISHER_EVENT_ADAPTER_NAME;
@@ -97,6 +98,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
     private HttpClient httpClient = null;
     private HostConfiguration hostConfiguration = null;
     private String internalAccessToken = null;
+    private final String provider;
 
     public HTTPEventAdapter(OutputEventAdapterConfiguration eventAdapterConfiguration,
             Map<String, String> globalProperties) {
@@ -104,6 +106,9 @@ public class HTTPEventAdapter implements OutputEventAdapter {
         this.globalProperties = globalProperties;
         this.clientMethod = eventAdapterConfiguration.getStaticProperties()
                 .get(HTTPEventAdapterConstants.ADAPTER_HTTP_CLIENT_METHOD);
+        // Read provider from static properties; default to EMAIL_PROVIDER for backward compatibility.
+        String configuredProvider = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_SECRET_PROVIDER);
+        this.provider = StringUtils.isNotBlank(configuredProvider) ? configuredProvider : DEFAULT_SECRET_PROVIDER;
         // Setting the static proxy configurations for the HTTP adapter.
         if (eventAdapterConfiguration.getStaticProperties().get(HTTPEventAdapterConstants.ADAPTER_PROXY_HOST) != null &&
                 eventAdapterConfiguration.getStaticProperties().
@@ -194,14 +199,40 @@ public class HTTPEventAdapter implements OutputEventAdapter {
         this.checkHTTPClientInit(eventAdapterConfiguration.getStaticProperties());
     }
 
+    /**
+     * Build the request body from the event message. Subclasses may override this method to
+     * customise how the message is serialised before it is sent to the endpoint.
+     *
+     * @param message           Event message received from the event publisher framework.
+     * @return String body to be sent in the HTTP request.
+     */
+    protected String buildBody(Object message) {
+
+        return message.toString();
+    }
+
+    /**
+     * Build the initial set of HTTP request headers derived from the event message and dynamic
+     * properties. Subclasses may override this method to add, remove or modify headers before
+     * the request is sent. Auth-related headers are added separately by the publish logic and
+     * must not be included here.
+     *
+     * @param message           Event message received from the event publisher framework.
+     * @param dynamicProperties Dynamic properties from the event publisher configuration.
+     * @return Mutable map of header name to header value, or {@code null} if no extra headers.
+     */
+    protected Map<String, String> buildHeaders(Object message, Map<String, String> dynamicProperties) {
+
+        return extractHeaders(dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_HEADERS));
+    }
+
     @Override
     public void publish(Object message, Map<String, String> dynamicProperties) {
         //Load dynamic properties
         String url = dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_MESSAGE_URL);
         String authType = eventAdapterConfiguration.getStaticProperties().get(HTTPEventAdapterConstants.ADAPTER_AUTH_TYPE);
-        Map<String, String> headers = this
-                .extractHeaders(dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_HEADERS));
-        String payload = message.toString();
+        Map<String, String> headers = buildHeaders(message, dynamicProperties);
+        String payload = buildBody(message);
 
         Map<String, String> authProperties = new HashMap<>();
         if (StringUtils.isNotBlank(authType)) {
@@ -213,7 +244,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                                 log.debug("Retrieving the internal access token for client credential grant " +
                                         "type authentication from the secret manager.");
                             }
-                            this.internalAccessToken = new String(decryptCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL,
+                            this.internalAccessToken = new String(decryptCredential(provider, CLIENT_CREDENTIAL,
                                     INTERNAL_ACCESS_TOKEN));
                         } catch (SecretManagementException e) {
                             // Ignore the exception and generate a new access token as the internal access token is not
@@ -230,8 +261,8 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                             char[] clientId;
                             char[] clientSecret;
                             try {
-                                clientId = decryptCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL, CLIENT_ID);
-                                clientSecret = decryptCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL, CLIENT_SECRET);
+                                clientId = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_ID);
+                                clientSecret = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_SECRET);
                             } catch (SecretManagementException e) {
                                 if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID))
                                         || StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET))) {
@@ -262,7 +293,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                                 throw e;
                             }
                             try {
-                                encryptAndStoreCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN,
+                                encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN,
                                         internalAccessToken);
                             } catch (SecretManagementException e) {
                                 log.warn("Unable to store the newly generated access token in the secret manager.");
@@ -274,7 +305,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                 case BEARER:
                     char[] accessToken;
                     try {
-                        accessToken = decryptCredential(EMAIL_PROVIDER, BEARER, ACCESS_TOKEN);
+                        accessToken = decryptCredential(provider, BEARER, ACCESS_TOKEN);
                     } catch (SecretManagementException e) {
                         if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_ACCESS_TOKEN))) {
                             throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
@@ -288,7 +319,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                 case API_KEY:
                     char[] apiKeyValue;
                     try {
-                        apiKeyValue = decryptCredential(EMAIL_PROVIDER, API_KEY, API_KEY_VALUE);
+                        apiKeyValue = decryptCredential(provider, API_KEY, API_KEY_VALUE);
                     } catch (SecretManagementException e) {
                         if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_API_KEY_VALUE))) {
                             throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
@@ -305,8 +336,8 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                     char[] username;
                     char[] password;
                     try {
-                        username = decryptCredential(EMAIL_PROVIDER, BASIC, USERNAME);
-                        password = decryptCredential(EMAIL_PROVIDER, BASIC, PASSWORD);
+                        username = decryptCredential(provider, BASIC, USERNAME);
+                        password = decryptCredential(provider, BASIC, PASSWORD);
                     } catch (SecretManagementException e) {
                         if (StringUtils.isBlank(dynamicProperties.get(ADAPTER_USERNAME))
                                 || StringUtils.isBlank(dynamicProperties.get(ADAPTER_PASSWORD))) {
@@ -332,8 +363,8 @@ public class HTTPEventAdapter implements OutputEventAdapter {
             char[] username;
             char[] password;
             try {
-                username = decryptCredential(EMAIL_PROVIDER, BASIC, USERNAME);
-                password = decryptCredential(EMAIL_PROVIDER, BASIC, PASSWORD);
+                username = decryptCredential(provider, BASIC, USERNAME);
+                password = decryptCredential(provider, BASIC, PASSWORD);
             } catch (SecretManagementException e) {
                 username = dynamicProperties.get(ADAPTER_USERNAME).toCharArray();
                 password = dynamicProperties.get(ADAPTER_PASSWORD).toCharArray();
@@ -671,8 +702,8 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         .getThreadLocalCarbonContext();
                 privilegedCarbonContext.setTenantId(tenantId);
                 try {
-                    clientId = decryptCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL, CLIENT_ID);
-                    clientSecret = decryptCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL, CLIENT_SECRET);
+                    clientId = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_ID);
+                    clientSecret = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_SECRET);
                 } catch (SecretManagementException e) {
                     if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID))
                             || StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET))) {
@@ -717,7 +748,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                                 "Received success response from external endpoint",
                                 DiagnosticLog.ResultStatus.SUCCESS);
                         try {
-                            encryptAndStoreCredential(EMAIL_PROVIDER, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN,
+                            encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN,
                                     internalAccessToken);
                         } catch (SecretManagementException e) {
                             log.warn("Unable to store the newly generated access token in the secret manager.");
