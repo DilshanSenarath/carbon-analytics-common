@@ -27,6 +27,7 @@ public class EmailEventAdapterConstants {
     public static final String ADAPTER_MESSAGE_EMAIL_ADDRESS = "email.address";
     public static final String ADAPTER_MESSAGE_EMAIL_ADDRESS_HINT = "emailAddress.hint";
     public static final String ADAPTER_MESSAGE_EMAIL_SUBJECT = "email.subject";
+    public static final String ADAPTER_MESSAGE_EMAIL_SYNC = "email.sync";
     public static final String APAPTER_MESSAGE_EMAIL_TYPE = "email.type";
     public static final String ADAPTER_MESSAGE_EMAIL_TYPE_HINT = "emailType.hint";
     public static final String ADAPTER_EMAIL_SMTP_PORT = "mail.smtp.port";

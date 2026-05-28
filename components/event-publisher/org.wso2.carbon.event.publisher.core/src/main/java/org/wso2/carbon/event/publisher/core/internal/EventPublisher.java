@@ -1,20 +1,21 @@
 /*
- *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016-2026, WSO2 LLC. (http://www.wso2.com).
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.event.publisher.core.internal;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +42,7 @@ import org.wso2.carbon.event.publisher.core.internal.ds.EventPublisherServiceVal
 import org.wso2.carbon.event.publisher.core.internal.util.EventPublisherUtil;
 import org.wso2.carbon.event.stream.core.WSO2EventConsumer;
 import org.wso2.carbon.event.stream.core.exception.EventStreamConfigurationException;
+import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 
 
 import java.util.ArrayList;
@@ -374,37 +376,11 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
         Map<String, String> dynamicProperties = new HashMap<String, String>(eventPublisherConfiguration.getToAdapterDynamicProperties());
         Object outObject;
 
-        if (traceEnabled) {
-            trace.info(beforeTracerPrefix + event);
-        }
-        if (statisticsEnabled) {
-        }
-
-        if (!processingEnabled) {
-            return;
-
-        }
-
-        EventPublisherUtil.populateUrlPlaceholders(dynamicProperties, event.getArbitraryDataMap());
-        org.wso2.siddhi.core.event.Event siddhiEvent = EventPublisherUtil.convertToSiddhiEvent(event, inputStreamSize);
-
         try {
-            if (customMappingEnabled) {
-                outObject = outputMapper.convertToMappedInputEvent(siddhiEvent);
-            } else {
-                outObject = outputMapper.convertToTypedInputEvent(siddhiEvent);
-            }
+            outObject = buildOutputMessage(event, dynamicProperties);
         } catch (EventPublisherConfigurationException e) {
             log.error("Cannot send " + event + " from " + eventPublisherConfiguration.getEventPublisherName(), e);
             return;
-        }
-
-        if (traceEnabled) {
-            trace.info(afterTracerPrefix + outObject);
-        }
-
-        if (dynamicMessagePropertyEnabled) {
-            changeDynamicEventAdapterMessageProperties(siddhiEvent.getData(), dynamicProperties, siddhiEvent.getArbitraryDataMap());
         }
 
         OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
@@ -427,6 +403,68 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
 
         eventAdapterService.publish(eventPublisherConfiguration.getEventPublisherName(), dynamicProperties, outObject);
+    }
+
+    @Override
+    public void onEventWithErrorPropagation(Event event) throws EventStreamException {
+
+        Map<String, String> dynamicProperties = new HashMap<String, String>(
+                eventPublisherConfiguration.getToAdapterDynamicProperties());
+        Object outObject;
+
+        try {
+            outObject = buildOutputMessage(event, dynamicProperties);
+        } catch (EventPublisherConfigurationException e) {
+            throw new EventStreamException("Cannot map " + event + " from publisher '"
+                    + eventPublisherConfiguration.getEventPublisherName() + "'", e);
+        }
+
+        OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
+        String publisherName = eventPublisherConfiguration.getEventPublisherName();
+        if (eventAdapterService.isSync(publisherName, dynamicProperties)) {
+            try {
+                eventAdapterService.publishSync(publisherName, dynamicProperties, outObject);
+            } catch (OutputEventAdapterException e) {
+                throw new EventStreamException("Synchronous delivery failed for publisher '"
+                        + publisherName + "'", e);
+            }
+        } else {
+            eventAdapterService.publish(publisherName, dynamicProperties, outObject);
+        }
+    }
+
+    private Object buildOutputMessage(Event event, Map<String, String> dynamicProperties)
+            throws EventPublisherConfigurationException {
+
+        if (traceEnabled) {
+            trace.info(beforeTracerPrefix + event);
+        }
+        if (statisticsEnabled) {
+        }
+
+        if (!processingEnabled) {
+            return null;
+        }
+
+        EventPublisherUtil.populateUrlPlaceholders(dynamicProperties, event.getArbitraryDataMap());
+        org.wso2.siddhi.core.event.Event siddhiEvent = EventPublisherUtil.convertToSiddhiEvent(event, inputStreamSize);
+
+        Object outObject;
+        if (customMappingEnabled) {
+            outObject = outputMapper.convertToMappedInputEvent(siddhiEvent);
+        } else {
+            outObject = outputMapper.convertToTypedInputEvent(siddhiEvent);
+        }
+
+        if (traceEnabled) {
+            trace.info(afterTracerPrefix + outObject);
+        }
+
+        if (dynamicMessagePropertyEnabled) {
+            changeDynamicEventAdapterMessageProperties(siddhiEvent.getData(), dynamicProperties, siddhiEvent.getArbitraryDataMap());
+        }
+
+        return outObject;
     }
 
     @Override

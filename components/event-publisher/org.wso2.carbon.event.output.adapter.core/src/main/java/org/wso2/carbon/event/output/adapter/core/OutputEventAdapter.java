@@ -1,17 +1,21 @@
 /*
- * Copyright (c) 2005 - 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2005-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed
- * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.event.output.adapter.core;
 
 import org.wso2.carbon.event.output.adapter.core.exception.ConnectionUnavailableException;
@@ -68,5 +72,32 @@ public interface OutputEventAdapter {
      * @return is polled
      */
     boolean isPolled();
+
+    /**
+     * Publishes the event synchronously, blocking until delivery succeeds or fails.
+     * Adapters that support synchronous delivery should override this method.
+     *
+     * @param message           Event to be published.
+     * @param dynamicProperties The dynamic properties of the event.
+     * @throws OutputEventAdapterException If this adapter does not support synchronous publishing.
+     */
+    default void publishSync(Object message, Map<String, String> dynamicProperties)
+            throws OutputEventAdapterException {
+
+        throw new OutputEventAdapterException(
+                "Synchronous publishing is not supported by this adapter type.");
+    }
+
+    /**
+     * Indicates whether the adapter should deliver the next message synchronously, based on the
+     * caller-supplied dynamic properties.
+     *
+     * @param dynamicProperties Per-message dynamic properties supplied by the caller.
+     * @return {@code true} if the message should be delivered via {@link #publishSync}.
+     */
+    default boolean isSync(Map<String, String> dynamicProperties) {
+
+        return false;
+    }
 
 }

@@ -17,6 +17,7 @@ package org.wso2.carbon.event.stream.core;
 import org.wso2.carbon.databridge.commons.Event;
 import org.wso2.carbon.databridge.commons.StreamDefinition;
 import org.wso2.carbon.event.stream.core.exception.EventStreamConfigurationException;
+import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 
 import java.util.List;
 
@@ -92,6 +93,23 @@ public interface EventStreamService {
     public void unsubscribe(WSO2EventListConsumer wso2EventConsumer);
 
     public void publish(Event event);
+
+    /**
+     * Publishes an event to the stream using the error-propagating path. Every subscribed consumer
+     * is invoked regardless of whether a previous consumer failed. If any consumers fail, all their
+     * failures are collected and thrown together as an
+     * {@link org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException}, which
+     * exposes each individual failure via
+     * {@link org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException#getFailures()}.
+     *
+     * @param event Event to publish.
+     * @throws org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException If one or
+     *         more consumers failed to process the event.
+     */
+    public default void publishWithErrorPropagation(Event event) throws EventStreamException {
+
+        throw new EventStreamException("The publishWithErrorPropagation method is not implemented");
+    }
 
     /**
      * Add the Event Stream Configuration.

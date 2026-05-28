@@ -15,6 +15,7 @@
 package org.wso2.carbon.event.stream.core;
 
 import org.wso2.carbon.databridge.commons.Event;
+import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 
 import java.util.List;
 
@@ -26,5 +27,16 @@ public interface EventProducerCallback {
     void sendEvent(Event event);
 
     void sendEvents(List<Event> events);
+
+    /**
+     * Dispatches the event and propagates consumer failures instead of silently dropping them.
+     *
+     * @param event The event to dispatch.
+     * @throws EventStreamException If one or more consumers fail to process the event.
+     */
+    default void sendEventWithErrorPropagation(Event event) throws EventStreamException {
+        
+        throw new EventStreamException("sendEventWithErrorPropagation is not implemented");
+    }
 
 }
