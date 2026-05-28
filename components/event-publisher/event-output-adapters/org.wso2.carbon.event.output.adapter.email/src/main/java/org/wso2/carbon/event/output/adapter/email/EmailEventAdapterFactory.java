@@ -163,10 +163,18 @@ public class EmailEventAdapterFactory extends OutputEventAdapterFactory {
         format.setDefaultValue(EmailEventAdapterConstants.MAIL_TEXT_PLAIN);
         format.setHint(resourceBundle.getString(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_TYPE_HINT));
 
+        //set sync mode of the email.
+        Property sync = new Property(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC);
+        sync.setDisplayName(resourceBundle.getString(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC));
+        sync.setRequired(false);
+        sync.setOptions(new String[]{Boolean.TRUE.toString(), Boolean.FALSE.toString()});
+        sync.setDefaultValue(Boolean.FALSE.toString());
+        sync.setHint(resourceBundle.getString(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC_HINT));
 
         dynamicPropertyList.add(emailAddress);
         dynamicPropertyList.add(subject);
         dynamicPropertyList.add(format);
+        dynamicPropertyList.add(sync);
 
         return dynamicPropertyList;
     }
