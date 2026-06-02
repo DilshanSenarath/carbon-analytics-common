@@ -63,6 +63,39 @@ public interface OutputEventAdapter {
     void disconnect();
 
     /**
+     * Called once before the first {@link #publishSync} invocation to establish a connection for
+     * the synchronous publish path. Adapters that support synchronous delivery must override this
+     * method to set up a sync-specific connection (e.g. a dedicated blocking transport).
+     * 
+     * The default throws {@link OutputEventAdapterException} so that adapters which have not
+     * implemented sync support fail explicitly rather than silently reusing the async connection.
+     *
+     * @throws ConnectionUnavailableException If the connection cannot be established.
+     * @throws OutputEventAdapterException    If synchronous connection is not supported.
+     */
+    default void connectSync() throws ConnectionUnavailableException, OutputEventAdapterException {
+
+        throw new OutputEventAdapterException(
+                "Synchronous connection is not supported by this adapter type.");
+    }
+
+    /**
+     * Called when a sync-path connection failure occurs, or during adapter teardown if the sync
+     * path was ever connected. Adapters that override {@link #connectSync()} must override this
+     * method to release the resources it opened.
+     *
+     * The default throws {@link OutputEventAdapterException} to catch adapters that implement
+     * {@link #connectSync()} but forget to implement the corresponding teardown.
+     *
+     * @throws OutputEventAdapterException If synchronous disconnection is not supported.
+     */
+    default void disconnectSync() throws OutputEventAdapterException {
+        
+        throw new OutputEventAdapterException(
+                "Synchronous disconnection is not supported by this adapter type.");
+    }
+
+    /**
      * Will be called at the end to clean all the resources consumed
      */
     void destroy();

@@ -33,6 +33,7 @@ public class OutputAdapterRuntime {
     private final OutputEventAdapter outputEventAdapter;
     private final String name;
     private volatile boolean connected = false;
+    private volatile boolean syncConnected = false;
     private final DecayTimer timer = new DecayTimer();
     private volatile long nextConnectionTime;
 
@@ -110,9 +111,9 @@ public class OutputAdapterRuntime {
     }
 
     /**
-     * Publishes a message synchronously, establishing a connection first if not already connected.
-     * Unlike the async publish path, this blocks until the adapter confirms delivery and throws
-     * an exception on failure rather than dropping the event silently.
+     * Publishes a message synchronously, establishing a sync-path connection first if not already
+     * connected. Unlike the async publish path, this blocks until the adapter confirms delivery
+     * and throws an exception on failure rather than dropping the event silently.
      *
      * @param message           The event payload to publish.
      * @param dynamicProperties Runtime properties passed to the underlying adapter.
@@ -122,19 +123,23 @@ public class OutputAdapterRuntime {
             throws OutputEventAdapterException {
 
         try {
-            if (!connected) {
+            if (!syncConnected) {
                 synchronized (this) {
-                    if (!connected) {
-                        outputEventAdapter.connect();
-                        connected = true;
+                    if (!syncConnected) {
+                        outputEventAdapter.connectSync();
+                        syncConnected = true;
                     }
                 }
             }
             outputEventAdapter.publishSync(message, dynamicProperties);
         } catch (ConnectionUnavailableException e) {
             synchronized (this) {
-                connected = false;
-                outputEventAdapter.disconnect();
+                syncConnected = false;
+                try {
+                    outputEventAdapter.disconnectSync();
+                } catch (OutputEventAdapterException disconnectEx) {
+                    log.error("Error disconnecting sync path for Output Adapter '" + name + "'", disconnectEx);
+                }
             }
             throw new OutputEventAdapterException(
                     "Output adapter '" + name + "' failed to publish synchronously", e);
@@ -163,6 +168,13 @@ public class OutputAdapterRuntime {
     public void destroy() {
         try {
             outputEventAdapter.disconnect();
+            if (syncConnected) {
+                try {
+                    outputEventAdapter.disconnectSync();
+                } catch (OutputEventAdapterException e) {
+                    log.error("Error disconnecting sync path for Output Adapter '" + name + "'", e);
+                }
+            }
         } finally {
             outputEventAdapter.destroy();
         }

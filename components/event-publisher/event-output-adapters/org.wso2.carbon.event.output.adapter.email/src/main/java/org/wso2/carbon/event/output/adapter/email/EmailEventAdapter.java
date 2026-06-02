@@ -348,6 +348,18 @@ public class EmailEventAdapter implements OutputEventAdapter {
     }
 
     @Override
+    public void connectSync() throws ConnectionUnavailableException {
+
+        connect();
+    }
+
+    @Override
+    public void disconnectSync() {
+
+        // No persistent transport to release.
+    }
+
+    @Override
     public void publishSync(Object message, Map<String, String> dynamicProperties)
             throws OutputEventAdapterException {
 
