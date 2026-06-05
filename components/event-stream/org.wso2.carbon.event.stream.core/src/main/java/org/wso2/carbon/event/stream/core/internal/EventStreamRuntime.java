@@ -38,6 +38,16 @@ public class EventStreamRuntime {
     private Map<Integer, Map<String, EventJunction>> tenantSpecificEventJunctions =
             new HashMap<Integer, Map<String, EventJunction>>();
 
+    /**
+     * Drops every event junction of the given tenant. Used on tenant unload so junctions (and the
+     * producer/consumer lists they hold) do not accumulate for every tenant ever loaded.
+     *
+     * @param tenantId Tenant ID.
+     */
+    public synchronized void removeEventJunctions(int tenantId) {
+        tenantSpecificEventJunctions.remove(tenantId);
+    }
+
     public void deleteStreamJunction(String streamId)
             throws EventStreamConfigurationException {
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();

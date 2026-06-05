@@ -424,4 +424,14 @@ public class CarbonEventStreamService implements EventStreamService {
         }
         return true;
     }
+
+    @Override
+    public void removeEventStreamConfigurations(int tenantId) {
+
+        tenantSpecificEventStreamConfigs.remove(tenantId);
+        EventStreamServiceValueHolder.getEventStreamRuntime().removeEventJunctions(tenantId);
+        if (log.isDebugEnabled()) {
+            log.debug("Removed in-memory event stream configurations of tenant: " + tenantId);
+        }
+    }
 }
