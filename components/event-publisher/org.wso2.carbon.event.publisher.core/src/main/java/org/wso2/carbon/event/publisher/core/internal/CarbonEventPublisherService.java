@@ -395,6 +395,30 @@ public class CarbonEventPublisherService implements EventPublisherService {
         tenantSpecificEventPublisherConfigurationMap.put(tenantId, eventPublisherConfigurationMap);
     }
 
+    @Override
+    public void removeEventPublisherConfigurations(int tenantId) {
+
+        Map<String, EventPublisher> eventPublisherMap = tenantSpecificEventPublisherConfigurationMap.remove(tenantId);
+        if (eventPublisherMap != null) {
+            for (EventPublisher eventPublisher : eventPublisherMap.values()) {
+                try {
+                    eventPublisher.prepareDestroy();
+                    EventPublisherServiceValueHolder.getEventStreamService().unsubscribe(eventPublisher);
+                    eventPublisher.destroy();
+                } catch (RuntimeException e) {
+                    log.warn("Error while destroying event publisher: "
+                            + eventPublisher.getEventPublisherConfiguration().getEventPublisherName()
+                            + " of tenant: " + tenantId, e);
+                }
+            }
+        }
+        tenantSpecificEventPublisherConfigurationFileMap.remove(tenantId);
+        tenantSpecificDeployerMap.remove(tenantId);
+        if (log.isDebugEnabled()) {
+            log.debug("Removed in-memory event publisher configurations of tenant: " + tenantId);
+        }
+    }
+
     public void removeEventPublisherConfigurationFile(String fileName, int tenantId) {
         List<EventPublisherConfigurationFile> eventPublisherConfigurationFileList = tenantSpecificEventPublisherConfigurationFileMap.get(tenantId);
         if (eventPublisherConfigurationFileList != null) {

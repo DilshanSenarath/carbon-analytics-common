@@ -245,4 +245,16 @@ public interface EventPublisherService {
 
     }
 
+    /**
+     * Removes every event publisher configuration and its runtime artifacts (output adapter instances,
+     * event stream subscriptions) held in memory for the given tenant. Intended to be invoked when a
+     * tenant is unloaded, so that per-tenant publisher state does not accumulate for every tenant ever
+     * loaded during the server's lifetime. Must be invoked within the tenant's carbon context flow.
+     *
+     * @param tenantId Tenant ID.
+     */
+    public default void removeEventPublisherConfigurations(int tenantId) {
+
+    }
+
 }

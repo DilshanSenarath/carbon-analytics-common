@@ -103,4 +103,16 @@ public interface EventStreamService {
             throws EventStreamConfigurationException {
     }
 
+    /**
+     * Removes every event stream configuration and event junction held in memory for the given tenant.
+     * Intended to be invoked when a tenant is unloaded — after its event publishers have been removed —
+     * so that per-tenant stream state does not accumulate for every tenant ever loaded during the
+     * server's lifetime.
+     *
+     * @param tenantId Tenant ID.
+     */
+    public default void removeEventStreamConfigurations(int tenantId) {
+
+    }
+
 }
