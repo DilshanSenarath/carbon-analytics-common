@@ -30,6 +30,7 @@ import org.wso2.carbon.event.stream.core.*;
 import org.wso2.carbon.event.stream.core.exception.EventStreamConfigurationException;
 import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 import org.wso2.carbon.event.stream.core.internal.ds.EventStreamServiceValueHolder;
+import org.wso2.carbon.event.stream.core.internal.util.EventStreamConstants;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -128,8 +129,8 @@ public class EventStreamRuntime {
 
         Map<String, EventJunction> eventJunctionMap = tenantSpecificEventJunctions.get(tenantId);
         if (eventJunctionMap == null || !eventJunctionMap.containsKey(streamId)) {
-            throw new EventStreamException("No junction found for streamId '" + streamId
-                    + "' on tenant " + tenantId + "; cannot the deliver event.");
+            throw new EventStreamException(EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM
+                    .formatDescription(streamId, tenantId));
         }
         eventJunctionMap.get(streamId).sendEventWithErrorPropagation(event);
     }

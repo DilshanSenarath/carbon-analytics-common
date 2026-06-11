@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.event.output.adapter.core.internal;
 
 
@@ -33,4 +34,56 @@ public final class EventAdapterConstants {
     public static final String ADAPTER_EMAIL_SMTP_USER = "mail.smtp.user";
 
     public static final String BASIC = "BASIC";
+
+    /**
+     * Error messages for the output-adapter synchronous publish path.
+     */
+    public enum ErrorMessage {
+
+        SYNC_CONNECT_UNSUPPORTED(
+                "OA-65000",
+                "Synchronous connection is not supported by this adapter type.",
+                "Synchronous connection is not supported by this adapter type."),
+
+        SYNC_DISCONNECT_UNSUPPORTED(
+                "OA-65001",
+                "Synchronous disconnection is not supported by this adapter type.",
+                "Synchronous disconnection is not supported by this adapter type."),
+
+        SYNC_PUBLISH_UNSUPPORTED(
+                "OA-65002",
+                "Synchronous publishing is not supported by this adapter type.",
+                "Synchronous publishing is not supported by this adapter type."),
+
+        SYNC_PATH_DISCONNECT_FAILED(
+                "OA-65003",
+                "Failed to disconnect the synchronous publish path for the output adapter.",
+                "Error disconnecting sync path for Output Adapter '%s'."),
+
+        SYNC_PUBLISH_FAILED(
+                "OA-65004",
+                "Output adapter failed to publish the event synchronously.",
+                "Output Adapter '%s' failed to publish synchronously.");
+
+        private final String code;
+        private final String message;
+        private final String description;
+
+        ErrorMessage(String code, String message, String description) {
+            this.code = code;
+            this.message = message;
+            this.description = description;
+        }
+
+        public String getCode() { return code; }
+
+        public String getMessage() { return message; }
+
+        public String getDescription() { return description; }
+
+        public String formatDescription(Object... args) { return String.format(description, args); }
+
+        @Override
+        public String toString() { return code + " | " + message + " | " + description; }
+    }
 }

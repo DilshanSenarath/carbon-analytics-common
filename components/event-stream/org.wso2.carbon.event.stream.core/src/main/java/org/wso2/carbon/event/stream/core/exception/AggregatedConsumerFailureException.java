@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.event.stream.core.exception;
 
+import org.wso2.carbon.event.stream.core.internal.util.EventStreamConstants;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -35,23 +37,23 @@ public class AggregatedConsumerFailureException extends EventStreamException {
     }
 
     public List<ConsumerFailureException> getFailures() {
-        
+
         return failures;
     }
 
     private static String buildMessage(List<ConsumerFailureException> failures) {
 
         if (failures.isEmpty()) {
-            return "Event dispatch failed with no recorded failures.";
+            return EventStreamConstants.ErrorMessage.EVENT_DISPATCH_NO_FAILURES.getDescription();
         }
-        StringBuilder sb = new StringBuilder(failures.size())
-                .append(" consumer(s) failed to process event: ");
+        StringBuilder failureList = new StringBuilder();
         for (int i = 0; i < failures.size(); i++) {
             if (i > 0) {
-                sb.append("; ");
+                failureList.append("; ");
             }
-            sb.append('[').append(failures.get(i)).append(']');
+            failureList.append('[').append(failures.get(i)).append(']');
         }
-        return sb.toString();
+        return EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED
+                .formatDescription(failures.size(), failureList.toString());
     }
 }

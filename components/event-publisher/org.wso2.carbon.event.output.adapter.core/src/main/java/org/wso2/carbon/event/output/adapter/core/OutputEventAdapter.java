@@ -21,6 +21,7 @@ package org.wso2.carbon.event.output.adapter.core;
 import org.wso2.carbon.event.output.adapter.core.exception.ConnectionUnavailableException;
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterException;
 import org.wso2.carbon.event.output.adapter.core.exception.TestConnectionNotSupportedException;
+import org.wso2.carbon.event.output.adapter.core.internal.EventAdapterConstants;
 
 import java.util.Map;
 
@@ -75,8 +76,8 @@ public interface OutputEventAdapter {
      */
     default void connectSync() throws ConnectionUnavailableException, OutputEventAdapterException {
 
-        throw new OutputEventAdapterException(
-                "Synchronous connection is not supported by this adapter type.");
+        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage
+                .SYNC_CONNECT_UNSUPPORTED.getDescription());
     }
 
     /**
@@ -91,8 +92,8 @@ public interface OutputEventAdapter {
      */
     default void disconnectSync() throws OutputEventAdapterException {
         
-        throw new OutputEventAdapterException(
-                "Synchronous disconnection is not supported by this adapter type.");
+        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage
+                .SYNC_DISCONNECT_UNSUPPORTED.getDescription());
     }
 
     /**
@@ -117,8 +118,8 @@ public interface OutputEventAdapter {
     default void publishSync(Object message, Map<String, String> dynamicProperties)
             throws OutputEventAdapterException {
 
-        throw new OutputEventAdapterException(
-                "Synchronous publishing is not supported by this adapter type.");
+        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage
+                .SYNC_PUBLISH_UNSUPPORTED.getDescription());
     }
 
     /**

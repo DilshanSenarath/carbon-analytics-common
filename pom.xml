@@ -228,6 +228,11 @@
                 <artifactId>org.wso2.carbon.identity.secret.mgt.core</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.external.api.client</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
 
             <!--siddhi dependencies start-->
             <dependency>
@@ -1523,7 +1528,7 @@
         <!--<carbon.commons.imp.pkg.version>[4.3.0, 4.4.0)</carbon.commons.imp.pkg.version>-->
 
         <!--Carbon Identity Framework Version-->
-        <carbon.identity.framework.version>7.7.23</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.11.120</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[7.1.0, 8.0.0)</carbon.identity.framework.imp.pkg.version.range>
 
         <!--CEP versions-->

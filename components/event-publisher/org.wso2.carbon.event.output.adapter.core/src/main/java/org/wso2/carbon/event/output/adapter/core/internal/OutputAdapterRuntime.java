@@ -138,11 +138,12 @@ public class OutputAdapterRuntime {
                 try {
                     outputEventAdapter.disconnectSync();
                 } catch (OutputEventAdapterException disconnectEx) {
-                    log.error("Error disconnecting sync path for Output Adapter '" + name + "'", disconnectEx);
+                    log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
+                            .formatDescription(name), disconnectEx);
                 }
             }
-            throw new OutputEventAdapterException(
-                    "Output adapter '" + name + "' failed to publish synchronously", e);
+            throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED
+                    .formatDescription(name), e);
         }
     }
 
@@ -172,7 +173,8 @@ public class OutputAdapterRuntime {
                 try {
                     outputEventAdapter.disconnectSync();
                 } catch (OutputEventAdapterException e) {
-                    log.error("Error disconnecting sync path for Output Adapter '" + name + "'", e);
+                    log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
+                            .formatDescription(name), e);
                 }
             }
         } finally {

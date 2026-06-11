@@ -42,6 +42,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class EventJunction implements EventProducerCallback {
 
     private static final Log log = LogFactory.getLog(EventJunction.class);
+    private static final String CONSUMER_TYPE_SIDDHI = SiddhiEventConsumer.class.getSimpleName();
+    private static final String CONSUMER_TYPE_WSO2 = WSO2EventConsumer.class.getSimpleName();
+    private static final String CONSUMER_TYPE_WSO2_LIST = WSO2EventListConsumer.class.getSimpleName();
 
     /*
      latest stream definition.
@@ -192,7 +195,7 @@ public class EventJunction implements EventProducerCallback {
                 try {
                     consumer.consumeEventWithErrorPropagation(convertedEvent);
                 } catch (EventStreamException e) {
-                    failures.add(new ConsumerFailureException("SiddhiEventConsumer", streamDefinition.getStreamId(), e));
+                    failures.add(new ConsumerFailureException(CONSUMER_TYPE_SIDDHI, streamDefinition.getStreamId(), e));
                 }
             }
         }
@@ -202,7 +205,7 @@ public class EventJunction implements EventProducerCallback {
                 try {
                     consumer.onEventWithErrorPropagation(event);
                 } catch (EventStreamException e) {
-                    failures.add(new ConsumerFailureException("WSO2EventConsumer", streamDefinition.getStreamId(), e));
+                    failures.add(new ConsumerFailureException(CONSUMER_TYPE_WSO2, streamDefinition.getStreamId(), e));
                 }
             }
         }
@@ -212,7 +215,7 @@ public class EventJunction implements EventProducerCallback {
                 try {
                     consumer.onEventWithErrorPropagation(event);
                 } catch (EventStreamException e) {
-                    failures.add(new ConsumerFailureException("WSO2EventListConsumer", streamDefinition.getStreamId(), e));
+                    failures.add(new ConsumerFailureException(CONSUMER_TYPE_WSO2_LIST, streamDefinition.getStreamId(), e));
                 }
             }
         }

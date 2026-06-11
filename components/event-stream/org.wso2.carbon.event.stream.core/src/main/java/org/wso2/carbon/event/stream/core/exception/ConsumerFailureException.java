@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.event.stream.core.exception;
 
+import org.wso2.carbon.event.stream.core.internal.util.EventStreamConstants;
+
 /**
  * Exception thrown when a single stream consumer fails to process an event.
  */
@@ -28,7 +30,8 @@ public final class ConsumerFailureException extends EventStreamException {
 
     public ConsumerFailureException(String consumerType, String streamId, Throwable cause) {
 
-        super(consumerType + " on stream '" + streamId + "': " + cause.getMessage(), cause);
+        super(EventStreamConstants.ErrorMessage.CONSUMER_FAILURE
+                .formatDescription(consumerType, streamId, cause.getMessage()), cause);
         this.consumerType = consumerType;
         this.streamId = streamId;
     }
@@ -45,7 +48,7 @@ public final class ConsumerFailureException extends EventStreamException {
 
     @Override
     public String toString() {
-        
-        return consumerType + " on stream '" + streamId + "': " + getCause().getMessage();
+
+        return getMessage();
     }
 }

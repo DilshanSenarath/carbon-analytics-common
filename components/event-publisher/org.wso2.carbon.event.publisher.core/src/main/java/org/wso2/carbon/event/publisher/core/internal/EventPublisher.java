@@ -20,8 +20,6 @@ package org.wso2.carbon.event.publisher.core.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.databridge.commons.Attribute;
 import org.wso2.carbon.databridge.commons.Event;
@@ -55,7 +53,6 @@ import java.util.regex.Matcher;
 public class EventPublisher implements WSO2EventConsumer, EventSync {
 
     private static final Log log = LogFactory.getLog(EventPublisher.class);
-
     private final boolean traceEnabled;
     private final boolean statisticsEnabled;
     private final boolean processingEnabled;
@@ -415,8 +412,8 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
         try {
             outObject = buildOutputMessage(event, dynamicProperties);
         } catch (EventPublisherConfigurationException e) {
-            throw new EventStreamException("Cannot map " + event + " from publisher '"
-                    + eventPublisherConfiguration.getEventPublisherName() + "'", e);
+            throw new EventStreamException(EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED
+                    .formatDescription(eventPublisherConfiguration.getEventPublisherName(), e.getMessage()), e);
         }
 
         OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
@@ -425,8 +422,8 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
             try {
                 eventAdapterService.publishSync(publisherName, dynamicProperties, outObject);
             } catch (OutputEventAdapterException e) {
-                throw new EventStreamException("Synchronous delivery failed for publisher '"
-                        + publisherName + "'", e);
+                throw new EventStreamException(EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED
+                        .formatDescription(publisherName), e);
             }
         } else {
             eventAdapterService.publish(publisherName, dynamicProperties, outObject);

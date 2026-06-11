@@ -377,7 +377,8 @@ public class EmailEventAdapter implements OutputEventAdapter {
             try {
                 buildAndSendEmail(email, subject, message.toString(), emailType);
             } catch (MessagingException | UnsupportedEncodingException e) {
-                throw new OutputEventAdapterException("Failed to send email to '" + email + "'", e);
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.formatDescription(email), e);
             }
         }
     }
