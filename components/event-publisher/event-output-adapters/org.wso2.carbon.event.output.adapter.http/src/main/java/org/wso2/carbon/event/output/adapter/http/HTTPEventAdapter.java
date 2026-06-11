@@ -1,25 +1,25 @@
 /*
-*  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.event.output.adapter.http;
 
 import org.apache.axiom.om.util.Base64;
 import org.apache.commons.httpclient.*;
-import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -36,6 +36,10 @@ import org.wso2.carbon.event.output.adapter.core.exception.ConnectionUnavailable
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterException;
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterRuntimeException;
 import org.wso2.carbon.event.output.adapter.core.exception.TestConnectionNotSupportedException;
+import org.wso2.carbon.identity.external.api.client.api.exception.APIClientException;
+import org.wso2.carbon.identity.external.api.client.api.model.APIClientConfig;
+import org.wso2.carbon.identity.external.api.client.api.model.APIRequestContext;
+import org.wso2.carbon.identity.external.api.client.api.model.APIResponse;
 import org.wso2.carbon.event.output.adapter.http.internal.util.HTTPEventAdapterConstants;
 import org.wso2.carbon.identity.secret.mgt.core.exception.SecretManagementException;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -46,6 +50,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
 
@@ -99,6 +104,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
     private HostConfiguration hostConfiguration = null;
     private String internalAccessToken = null;
     private final String provider;
+    private volatile SyncHttpClientManager syncHttpClientManager = null;
 
     public HTTPEventAdapter(OutputEventAdapterConfiguration eventAdapterConfiguration,
             Map<String, String> globalProperties) {
@@ -228,170 +234,449 @@ public class HTTPEventAdapter implements OutputEventAdapter {
 
     @Override
     public void publish(Object message, Map<String, String> dynamicProperties) {
+
         //Load dynamic properties
         String url = dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_MESSAGE_URL);
         String authType = eventAdapterConfiguration.getStaticProperties().get(HTTPEventAdapterConstants.ADAPTER_AUTH_TYPE);
         Map<String, String> headers = buildHeaders(message, dynamicProperties);
         String payload = buildBody(message);
+        Map<String, String> authProperties = resolveAuthProperties(authType, dynamicProperties);
+        try {
+            executorService.submit(new HTTPSender(url, payload, headers, httpClient, authType, authProperties));
+        } catch (RejectedExecutionException e) {
+            EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), message,
+                    "Job queue is full", e, log, tenantId);
+        }
+    }
 
-        Map<String, String> authProperties = new HashMap<>();
-        if (StringUtils.isNotBlank(authType)) {
-            switch (authType.toUpperCase()) {
-                case CLIENT_CREDENTIAL:
-                    if (this.internalAccessToken == null) {
-                        try {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Retrieving the internal access token for client credential grant " +
-                                        "type authentication from the secret manager.");
-                            }
-                            this.internalAccessToken = new String(decryptCredential(provider, CLIENT_CREDENTIAL,
-                                    INTERNAL_ACCESS_TOKEN));
-                        } catch (SecretManagementException e) {
-                            // Ignore the exception and generate a new access token as the internal access token is not
-                            // available in the secret store manager.
-                        }
+    @Override
+    public void disconnect() {
 
-                        if (StringUtils.isBlank(internalAccessToken)) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Internal access token for client credential grant type authentication is " +
-                                        "not available in the secret manager.");
-                            }
-                            // Either clientId and clientSecret are both encrypted or both are in plain text.
-                            // Hence, failing to decrypt clientId or clientSecret means they are in plain text.
-                            char[] clientId;
-                            char[] clientSecret;
-                            try {
-                                clientId = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_ID);
-                                clientSecret = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_SECRET);
-                            } catch (SecretManagementException e) {
-                                if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID))
-                                        || StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET))) {
-                                    throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
-                                            " failed to connect to the server due to missing client credentials");
-                                }
-                                clientId = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID).toCharArray();
-                                clientSecret = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET).toCharArray();
-                            }
-                            String tokenEndpoint = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_TOKEN_ENDPOINT);
-                            String scopes = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_SCOPES);
+        //not required
+    }
 
-                            if (log.isDebugEnabled()) {
-                                log.debug("Access token is not available. Generating a new access token for " +
-                                        "HTTP-Based Event Publishing");
-                            }
-                            try {
-                                this.internalAccessToken = getAccessToken(new String(clientId),
-                                        new String(clientSecret), tokenEndpoint, scopes);
-                                logEventPublishing(
-                                        "Access token is successfully retrieved using client " +
-                                                "credentials grant type for HTTP-based email publishing.",
-                                        DiagnosticLog.ResultStatus.SUCCESS);
-                            } catch (OutputEventAdapterRuntimeException e) {
-                                logEventPublishingFailure(
-                                        "Received failure response while retrieving access token " +
-                                                "using client credentials grant for HTTP-based email publishing.", e);
-                                throw e;
-                            }
-                            try {
-                                encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN,
-                                        internalAccessToken);
-                            } catch (SecretManagementException e) {
-                                log.warn("Unable to store the newly generated access token in the secret manager.");
-                            }
-                        }
-                    }
-                    authProperties.put(INTERNAL_ACCESS_TOKEN, this.internalAccessToken);
-                    break;
-                case BEARER:
-                    char[] accessToken;
-                    try {
-                        accessToken = decryptCredential(provider, BEARER, ACCESS_TOKEN);
-                    } catch (SecretManagementException e) {
-                        if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_ACCESS_TOKEN))) {
-                            throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
-                                    " failed to connect to the server due to missing access token");
-                        }
-                        accessToken = eventAdapterConfiguration.getStaticProperties()
-                                .get(ADAPTER_ACCESS_TOKEN).toCharArray();
-                    }
-                    authProperties.put(ACCESS_TOKEN, new String(accessToken));
-                    break;
-                case API_KEY:
-                    char[] apiKeyValue;
-                    try {
-                        apiKeyValue = decryptCredential(provider, API_KEY, API_KEY_VALUE);
-                    } catch (SecretManagementException e) {
-                        if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_API_KEY_VALUE))) {
-                            throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
-                                    " failed to connect to the server due to missing API key value");
-                        }
-                        apiKeyValue = eventAdapterConfiguration.getStaticProperties()
-                                .get(ADAPTER_API_KEY_VALUE).toCharArray();
-                    }
-                    String apiKeyHeader = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_API_KEY_HEADER);
-                    authProperties.put(API_KEY_HEADER, apiKeyHeader);
-                    authProperties.put(API_KEY_VALUE, new String(apiKeyValue));
-                    break;
-                case BASIC:
-                    char[] username;
-                    char[] password;
-                    try {
-                        username = decryptCredential(provider, BASIC, USERNAME);
-                        password = decryptCredential(provider, BASIC, PASSWORD);
-                    } catch (SecretManagementException e) {
-                        if (StringUtils.isBlank(dynamicProperties.get(ADAPTER_USERNAME))
-                                || StringUtils.isBlank(dynamicProperties.get(ADAPTER_PASSWORD))) {
-                            throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
-                                    " failed to connect to the server due to missing credentials");
-                        }
-                        username = dynamicProperties.get(ADAPTER_USERNAME).toCharArray();
-                        password = dynamicProperties.get(ADAPTER_PASSWORD).toCharArray();
-                    }
-                    authProperties.put(USERNAME, new String(username));
-                    authProperties.put(PASSWORD, new String(password));
-                    break;
-                case NONE:
-                    break;
+    @Override
+    public void connectSync() throws ConnectionUnavailableException, OutputEventAdapterException {
+
+        if (syncHttpClientManager != null) {
+            return;
+        }
+        synchronized (this) {
+            if (syncHttpClientManager != null) {
+                return;
             }
             try {
-                executorService.submit(new HTTPSender(url, payload, headers, httpClient, authType, authProperties));
-            } catch (RejectedExecutionException e) {
-                EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), message,
-                        "Job queue is full", e, log, tenantId);
+                APIClientConfig.Builder configBuilder = new APIClientConfig.Builder()
+                        .httpConnectionTimeoutInMillis(getGlobalIntProperty(
+                                HTTPEventAdapterConstants.SYNC_CONNECTION_TIMEOUT,
+                                HTTPEventAdapterConstants.DEFAULT_SYNC_CONNECTION_TIMEOUT_MS))
+                        .httpReadTimeoutInMillis(getGlobalIntProperty(
+                                HTTPEventAdapterConstants.SYNC_READ_TIMEOUT,
+                                HTTPEventAdapterConstants.DEFAULT_SYNC_READ_TIMEOUT_MS))
+                        .httpConnectionRequestTimeoutInMillis(getGlobalIntProperty(
+                                HTTPEventAdapterConstants.SYNC_CONNECTION_REQUEST_TIMEOUT,
+                                HTTPEventAdapterConstants.DEFAULT_SYNC_CONNECTION_REQUEST_TIMEOUT_MS))
+                        .poolSizeToBeSet(getGlobalIntProperty(
+                                HTTPEventAdapterConstants.SYNC_POOL_SIZE,
+                                HTTPEventAdapterConstants.DEFAULT_SYNC_POOL_SIZE))
+                        .defaultMaxPerRoute(getGlobalIntProperty(
+                                HTTPEventAdapterConstants.SYNC_MAX_CONNECTIONS_PER_ROUTE,
+                                HTTPEventAdapterConstants.DEFAULT_SYNC_MAX_CONNECTIONS_PER_ROUTE))
+                        .responseLimitInBytes(getGlobalLongProperty(
+                                HTTPEventAdapterConstants.SYNC_RESPONSE_LIMIT_BYTES,
+                                HTTPEventAdapterConstants.DEFAULT_SYNC_RESPONSE_LIMIT_BYTES));
+                if (StringUtils.isNotBlank(proxyHost) && StringUtils.isNotBlank(proxyPort)) {
+                    try {
+                        configBuilder.proxyHost(proxyHost).proxyPort(Integer.parseInt(proxyPort));
+                    } catch (NumberFormatException e) {
+                        log.error("Invalid proxy port: " + proxyPort +
+                                ", ignoring proxy settings for sync HTTP output event adaptor.", e);
+                    }
+                }
+                int syncRetryCount = getGlobalIntProperty(
+                        HTTPEventAdapterConstants.SYNC_RETRY_COUNT,
+                        HTTPEventAdapterConstants.DEFAULT_SYNC_RETRY_COUNT);
+                syncHttpClientManager = new SyncHttpClientManager(configBuilder.build(), syncRetryCount);
+            } catch (APIClientException e) {
+                throw new OutputEventAdapterException(
+                        "Failed to initialize sync HTTP client for adapter: " +
+                        eventAdapterConfiguration.getName(), e);
             }
+        }
+        initContentType();
+    }
+
+    @Override
+    public void disconnectSync() {
+
+        syncHttpClientManager = null;
+    }
+
+    @Override
+    public void publishSync(Object message, Map<String, String> dynamicProperties)
+            throws OutputEventAdapterException {
+
+        if (syncHttpClientManager == null) {
+            throw new OutputEventAdapterException(
+                    "Sync HTTP client is not initialized for adapter: " + eventAdapterConfiguration.getName());
+        }
+        String url = dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_MESSAGE_URL);
+        String authType = eventAdapterConfiguration.getStaticProperties()
+                .get(HTTPEventAdapterConstants.ADAPTER_AUTH_TYPE);
+        String payload = buildBody(message);
+
+        Map<String, String> rawHeaders = buildHeaders(message, dynamicProperties);
+        Map<String, String> headers = rawHeaders != null ? rawHeaders : new HashMap<>();
+        Map<String, String> authProperties = resolveAuthProperties(authType, dynamicProperties);
+        Optional<AuthHeader> authHeader = buildAuthHeader(authType, authProperties);
+        if (authHeader.isPresent()) {
+            headers.put(authHeader.get().name(), authHeader.get().value());
+        }
+        if (!clientMethod.equalsIgnoreCase(HTTPEventAdapterConstants.CONSTANT_HTTP_GET)) {
+            headers.put("Content-Type", contentType);
+        }
+
+        APIRequestContext.HttpMethod httpMethod;
+        if (clientMethod.equalsIgnoreCase(HTTPEventAdapterConstants.CONSTANT_HTTP_GET)) {
+            httpMethod = APIRequestContext.HttpMethod.GET;
+        } else if (clientMethod.equalsIgnoreCase(HTTPEventAdapterConstants.CONSTANT_HTTP_PUT)) {
+            httpMethod = APIRequestContext.HttpMethod.PUT;
         } else {
+            httpMethod = APIRequestContext.HttpMethod.POST;
+        }
+
+        try {
+            UUID uuid = UUID.randomUUID();
+            APIResponse response = syncHttpClientManager.send(url, httpMethod, headers, payload);
+            int responseCode = response.getStatusCode();
+            if (responseCode / 100 == 2) {
+                if (log.isDebugEnabled()) {
+                    log.debug("[Id: " + uuid + "] Successfully published event to the endpoint: " + url +
+                            ". Received HTTP response code is: " + responseCode +
+                            ". Response body: " + response.getResponseBody());
+                }
+                logEventPublishing(
+                        "Received success response from external endpoint: " + url +
+                                " for HTTP-based sync email publishing.",
+                        DiagnosticLog.ResultStatus.SUCCESS);
+            } else if ((responseCode == 401 || responseCode == 403) &&
+                    StringUtils.equalsIgnoreCase(CLIENT_CREDENTIAL, authType)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("[Id: " + uuid + "] Received an unauthorized response from the endpoint: " + url +
+                            ". Response code: " + responseCode +
+                            ". Response body: " + response.getResponseBody() +
+                            ". Hence refreshing the access token and retrying.");
+                }
+                logEventPublishing(
+                        "Received unauthorized response from external endpoint: " + url +
+                                ". Refreshing access token and retrying.",
+                        DiagnosticLog.ResultStatus.SUCCESS);
+                String newToken = fetchNewAccessToken();
+                Map<String, String> retryHeaders = new HashMap<>(headers);
+                retryHeaders.put("Authorization", "Bearer " + newToken);
+                APIResponse retryResponse = syncHttpClientManager.send(url, httpMethod, retryHeaders, payload);
+                int retryCode = retryResponse.getStatusCode();
+                if (retryCode / 100 != 2) {
+                    Map<String, Object> retryParams = new HashMap<>();
+                    retryParams.put(RESPONSE_CODE, retryCode);
+                    retryParams.put(ERROR_RESPONSE, retryResponse.getResponseBody());
+                    log.error("[Id: " + uuid + "] Error while publishing event to the endpoint: " + url +
+                            " after token refresh. Received HTTP response code is: " + retryCode +
+                            ". Response body: " + retryResponse.getResponseBody());
+                    logEventPublishing(
+                            "Received error response from external endpoint: " + url +
+                                    " after token refresh for HTTP-based sync email publishing.",
+                            DiagnosticLog.ResultStatus.FAILED, retryParams);
+                    throw new OutputEventAdapterException(
+                            "Failed to publish event to: " + url + ". Response code: " + retryCode +
+                            ". Response body: " + retryResponse.getResponseBody());
+                }
+                try {
+                    encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN, newToken);
+                } catch (SecretManagementException e) {
+                    log.warn("Unable to store the newly generated access token in the secret manager.");
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("[Id: " + uuid + "] Successfully published event to the endpoint: " + url +
+                            " after token refresh. Received HTTP response code is: " + retryCode +
+                            ". Response body: " + retryResponse.getResponseBody());
+                }
+                logEventPublishing(
+                        "Received success response from external endpoint: " + url +
+                                " after token refresh for HTTP-based sync email publishing.",
+                        DiagnosticLog.ResultStatus.SUCCESS);
+            } else {
+                Map<String, Object> params = new HashMap<>();
+                params.put(RESPONSE_CODE, responseCode);
+                params.put(ERROR_RESPONSE, response.getResponseBody());
+                log.error("[Id: " + uuid + "] Error while publishing event to the endpoint: " + url +
+                        ". Received HTTP response code is: " + responseCode +
+                        ". Response body: " + response.getResponseBody());
+                logEventPublishing(
+                        "Received error response from external endpoint: " + url +
+                                " for HTTP-based sync email publishing.",
+                        DiagnosticLog.ResultStatus.FAILED, params);
+                throw new OutputEventAdapterException(
+                        "Failed to publish event to: " + url + ". Response code: " + responseCode +
+                        ". Response body: " + response.getResponseBody());
+            }
+        } catch (APIClientException e) {
+            throw new OutputEventAdapterException("Failed to publish event to: " + url, e);
+        }
+    }
+
+    @Override
+    public boolean isSync(Map<String, String> dynamicProperties) {
+
+        return Boolean.parseBoolean(
+                dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_MESSAGE_HTTP_SYNC));
+    }
+
+    @Override
+    public void destroy() {
+
+        //not required
+    }
+
+    @Override
+    public boolean isPolled() {
+        
+        return false;
+    }
+
+    private Map<String, String> resolveAuthProperties(String authType, Map<String, String> dynamicProperties) {
+        Map<String, String> authProperties = new HashMap<>();
+        if (StringUtils.isBlank(authType)) {
             char[] username;
             char[] password;
             try {
                 username = decryptCredential(provider, BASIC, USERNAME);
                 password = decryptCredential(provider, BASIC, PASSWORD);
             } catch (SecretManagementException e) {
-                username = dynamicProperties.get(ADAPTER_USERNAME).toCharArray();
-                password = dynamicProperties.get(ADAPTER_PASSWORD).toCharArray();
+                username = dynamicProperties.get(ADAPTER_USERNAME) != null ?
+                        dynamicProperties.get(ADAPTER_USERNAME).toCharArray() : new char[0];
+                password = dynamicProperties.get(ADAPTER_PASSWORD) != null ?
+                        dynamicProperties.get(ADAPTER_PASSWORD).toCharArray() : new char[0];
             }
-            try {
-                executorService.submit(new HTTPSender(url, payload, new String(username), new String(password), headers,
-                        httpClient));
-            } catch (RejectedExecutionException e) {
-                EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), message,
-                        "Job queue is full", e, log, tenantId);
+            authProperties.put(USERNAME, new String(username));
+            authProperties.put(PASSWORD, new String(password));
+            return authProperties;
+        }
+        switch (authType.toUpperCase()) {
+            case CLIENT_CREDENTIAL:
+                if (this.internalAccessToken == null) {
+                    try {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Retrieving the internal access token for client credential grant " +
+                                    "type authentication from the secret manager.");
+                        }
+                        this.internalAccessToken = new String(decryptCredential(provider, CLIENT_CREDENTIAL,
+                                INTERNAL_ACCESS_TOKEN));
+                    } catch (SecretManagementException e) {
+                            // Ignore the exception and generate a new access token as the internal access token is not
+                            // available in the secret store manager.
+                    }
+
+                    if (StringUtils.isBlank(internalAccessToken)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Internal access token for client credential grant type authentication is " +
+                                    "not available in the secret manager.");
+                        }
+                            // Either clientId and clientSecret are both encrypted or both are in plain text.
+                            // Hence, failing to decrypt clientId or clientSecret means they are in plain text.
+                        char[] clientId;
+                        char[] clientSecret;
+                        try {
+                            clientId = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_ID);
+                            clientSecret = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_SECRET);
+                        } catch (SecretManagementException e) {
+                            if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID))
+                                    || StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET))) {
+                                    throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
+                                        " failed to connect to the server due to missing client credentials");
+                            }
+                            clientId = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID).toCharArray();
+                            clientSecret = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET).toCharArray();
+                        }
+                        String tokenEndpoint = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_TOKEN_ENDPOINT);
+                        String scopes = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_SCOPES);
+
+                        if (log.isDebugEnabled()) {
+                            log.debug("Access token is not available. Generating a new access token for " +
+                                    "HTTP-Based Event Publishing");
+                        }
+                        try {
+                            this.internalAccessToken = getAccessToken(new String(clientId),
+                                    new String(clientSecret), tokenEndpoint, scopes);
+                            logEventPublishing(
+                                    "Access token is successfully retrieved using client " +
+                                            "credentials grant type for HTTP-based email publishing.",
+                                    DiagnosticLog.ResultStatus.SUCCESS);
+                        } catch (OutputEventAdapterRuntimeException e) {
+                            logEventPublishingFailure(
+                                    "Received failure response while retrieving access token " +
+                                            "using client credentials grant for HTTP-based email publishing.", e);
+                            throw e;
+                        }
+                        try {
+                            encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN,
+                                    internalAccessToken);
+                        } catch (SecretManagementException e) {
+                            log.warn("Unable to store the newly generated access token in the secret manager.");
+                        }
+                    }
+                }
+                authProperties.put(INTERNAL_ACCESS_TOKEN, this.internalAccessToken);
+                break;
+            case BEARER:
+                char[] accessToken;
+                try {
+                    accessToken = decryptCredential(provider, BEARER, ACCESS_TOKEN);
+                } catch (SecretManagementException e) {
+                    if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_ACCESS_TOKEN))) {
+                            throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
+                                " failed to connect to the server due to missing access token");
+                    }
+                    accessToken = eventAdapterConfiguration.getStaticProperties()
+                            .get(ADAPTER_ACCESS_TOKEN).toCharArray();
+                }
+                authProperties.put(ACCESS_TOKEN, new String(accessToken));
+                break;
+            case API_KEY:
+                char[] apiKeyValue;
+                try {
+                    apiKeyValue = decryptCredential(provider, API_KEY, API_KEY_VALUE);
+                } catch (SecretManagementException e) {
+                    if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_API_KEY_VALUE))) {
+                            throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
+                                " failed to connect to the server due to missing API key value");
+                    }
+                    apiKeyValue = eventAdapterConfiguration.getStaticProperties()
+                            .get(ADAPTER_API_KEY_VALUE).toCharArray();
+                }
+                String apiKeyHeader = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_API_KEY_HEADER);
+                authProperties.put(API_KEY_HEADER, apiKeyHeader);
+                authProperties.put(API_KEY_VALUE, new String(apiKeyValue));
+                break;
+            case BASIC:
+                char[] username;
+                char[] password;
+                try {
+                    username = decryptCredential(provider, BASIC, USERNAME);
+                    password = decryptCredential(provider, BASIC, PASSWORD);
+                } catch (SecretManagementException e) {
+                    if (StringUtils.isBlank(dynamicProperties.get(ADAPTER_USERNAME))
+                            || StringUtils.isBlank(dynamicProperties.get(ADAPTER_PASSWORD))) {
+                            throw new ConnectionUnavailableException("The adapter " + eventAdapterConfiguration.getName() +
+                                " failed to connect to the server due to missing credentials");
+                    }
+                    username = dynamicProperties.get(ADAPTER_USERNAME).toCharArray();
+                    password = dynamicProperties.get(ADAPTER_PASSWORD).toCharArray();
+                }
+                authProperties.put(USERNAME, new String(username));
+                authProperties.put(PASSWORD, new String(password));
+                break;
+            case NONE:
+                break;
+        }
+        return authProperties;
+    }
+
+    private record AuthHeader(String name, String value) {}
+
+    private static Optional<AuthHeader> buildAuthHeader(String authType, Map<String, String> authProperties) {
+        if (authType == null) {
+            String user = authProperties != null ? authProperties.get(USERNAME) : null;
+            String pass = authProperties != null ? authProperties.get(PASSWORD) : null;
+            if (StringUtils.isNotBlank(user)) {
+                return Optional.of(new AuthHeader("Authorization", "Basic " + Base64.encode(
+                        (user + HTTPEventAdapterConstants.ENTRY_SEPARATOR +
+                         (pass != null ? pass : "")).getBytes())));
             }
+            return Optional.empty();
+        }
+        switch (authType.toUpperCase()) {
+            case CLIENT_CREDENTIAL:
+                return Optional.of(new AuthHeader("Authorization",
+                        "Bearer " + authProperties.get(INTERNAL_ACCESS_TOKEN)));
+            case BEARER:
+                return Optional.of(new AuthHeader("Authorization",
+                        "Bearer " + authProperties.get(ACCESS_TOKEN)));
+            case API_KEY:
+                return Optional.of(new AuthHeader(
+                        authProperties.get(API_KEY_HEADER), authProperties.get(API_KEY_VALUE)));
+            case BASIC:
+                String username = authProperties.get(USERNAME);
+                String password = authProperties.get(PASSWORD);
+                if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
+                    return Optional.of(new AuthHeader("Authorization", "Basic " + Base64.encode(
+                            (username + HTTPEventAdapterConstants.ENTRY_SEPARATOR + password).getBytes())));
+                }
+                return Optional.empty();
+            default:
+                return Optional.empty();
         }
     }
 
-    @Override
-    public void disconnect() {
-        //not required
+    private int getGlobalIntProperty(String name, int defaultValue) {
+
+        String value = globalProperties.get(name);
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.trim());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid value for global property '" + name + "': '" + value +
+                        "'. Using default: " + defaultValue);
+            }
+        }
+        return defaultValue;
     }
 
-    @Override
-    public void destroy() {
-        //not required
+    private long getGlobalLongProperty(String name, long defaultValue) {
+        
+        String value = globalProperties.get(name);
+        if (value != null) {
+            try {
+                return Long.parseLong(value.trim());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid value for global property '" + name + "': '" + value +
+                        "'. Using default: " + defaultValue);
+            }
+        }
+        return defaultValue;
     }
 
-    @Override
-    public boolean isPolled() {
-        return false;
+    private String fetchNewAccessToken() throws OutputEventAdapterException {
+
+        char[] clientId;
+        char[] clientSecret;
+        try {
+            clientId = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_ID);
+            clientSecret = decryptCredential(provider, CLIENT_CREDENTIAL, CLIENT_SECRET);
+        } catch (SecretManagementException e) {
+            if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID))
+                    || StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET))) {
+                throw new OutputEventAdapterException("The adapter " + eventAdapterConfiguration.getName() +
+                        " failed to refresh the access token due to missing client credentials.");
+            }
+            clientId = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID).toCharArray();
+            clientSecret = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET).toCharArray();
+        }
+        String tokenEndpoint = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_TOKEN_ENDPOINT);
+        String scopes = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_SCOPES);
+        try {
+            String newToken = getAccessToken(new String(clientId), new String(clientSecret), tokenEndpoint, scopes);
+            logEventPublishing(
+                    "Access token is successfully retrieved using client credentials grant type " +
+                            "for HTTP-based sync email publishing.",
+                    DiagnosticLog.ResultStatus.SUCCESS);
+            return newToken;
+        } catch (OutputEventAdapterRuntimeException e) {
+            logEventPublishingFailure(
+                    "Received failure response while retrieving access token using client credentials " +
+                            "grant type for HTTP-based sync email publishing.", e);
+            throw e;
+        }
     }
 
     private void checkHTTPClientInit(Map<String, String> staticProperties) {
@@ -418,19 +703,23 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                 }
             }
 
-            String messageFormat = eventAdapterConfiguration.getMessageFormat();
-            if (messageFormat.equalsIgnoreCase(MessageType.JSON)) {
-                contentType = "application/json";
-            } else if (messageFormat.equalsIgnoreCase(MessageType.TEXT)) {
-                contentType = "text/plain";
-            } else if (messageFormat.equalsIgnoreCase(MessageType.FORM)) {
-                contentType = "application/x-www-form-urlencoded";
-            } else {
-                contentType = "text/xml";
-            }
-
+            initContentType();
         }
 
+    }
+
+    private void initContentType() {
+
+        String messageFormat = eventAdapterConfiguration.getMessageFormat();
+        if (messageFormat.equalsIgnoreCase(MessageType.JSON)) {
+            contentType = "application/json";
+        } else if (messageFormat.equalsIgnoreCase(MessageType.TEXT)) {
+            contentType = "text/plain";
+        } else if (messageFormat.equalsIgnoreCase(MessageType.FORM)) {
+            contentType = "application/x-www-form-urlencoded";
+        } else {
+            contentType = "text/xml";
+        }
     }
 
     private Map<String, String> extractHeaders(String headers) {
@@ -600,36 +889,9 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                     }
                 }
 
-                if (this.getAuthType() != null) {
-                    switch (this.getAuthType().toUpperCase()) {
-                        case CLIENT_CREDENTIAL:
-                            method.setRequestHeader("Authorization",
-                                    "Bearer " + this.getAuthProperties().get(INTERNAL_ACCESS_TOKEN));
-                            break;
-                        case BEARER:
-                            method.setRequestHeader("Authorization",
-                                    "Bearer " + this.getAuthProperties().get(ACCESS_TOKEN));
-                            break;
-                        case API_KEY:
-                            method.setRequestHeader(this.getAuthProperties().get(API_KEY_HEADER),
-                                    this.getAuthProperties().get(API_KEY_VALUE));
-                            break;
-                        case BASIC:
-                            if (this.getUsername() != null && !this.getUsername().trim().isEmpty() &&
-                                    this.getPassword() != null && !this.getPassword().trim().isEmpty()) {
-                                method.setRequestHeader("Authorization", "Basic " + Base64
-                                        .encode((this.getUsername() + HTTPEventAdapterConstants.ENTRY_SEPARATOR + this
-                                                .getPassword()).getBytes()));
-                            }
-                            break;
-                        case NONE:
-                            // Do nothing as there is no authentication.
-                            break;
-                    }
-                } else if (this.getUsername() != null && !this.getUsername().trim().isEmpty()) {
-                    method.setRequestHeader("Authorization", "Basic " + Base64
-                            .encode((this.getUsername() + HTTPEventAdapterConstants.ENTRY_SEPARATOR + this
-                                    .getPassword()).getBytes()));
+                Optional<AuthHeader> authHeader = buildAuthHeader(this.getAuthType(), this.getAuthProperties());
+                if (authHeader.isPresent()) {
+                    method.setRequestHeader(authHeader.get().name(), authHeader.get().value());
                 }
 
                 int responseCode = this.getHttpClient().executeMethod(hostConfiguration, method);

@@ -117,4 +117,23 @@ public class HTTPEventAdapterConstants {
 
     // Default value.
     public static final String DEFAULT_SECRET_PROVIDER = EMAIL_PROVIDER;
+
+    // Sync HTTP client connection pool configuration (read from global properties).
+    public static final String SYNC_CONNECTION_TIMEOUT = "syncConnectionTimeout";
+    public static final int DEFAULT_SYNC_CONNECTION_TIMEOUT_MS = 1000;
+    public static final String SYNC_READ_TIMEOUT = "syncReadTimeout";
+    public static final int DEFAULT_SYNC_READ_TIMEOUT_MS = 1000;
+    public static final String SYNC_CONNECTION_REQUEST_TIMEOUT = "syncConnectionRequestTimeout";
+    public static final int DEFAULT_SYNC_CONNECTION_REQUEST_TIMEOUT_MS = 1000;
+    public static final String SYNC_POOL_SIZE = "syncPoolSize";
+    public static final int DEFAULT_SYNC_POOL_SIZE = 20;
+    public static final String SYNC_MAX_CONNECTIONS_PER_ROUTE = "syncMaxConnectionsPerRoute";
+    public static final int DEFAULT_SYNC_MAX_CONNECTIONS_PER_ROUTE = 2;
+    public static final String SYNC_RESPONSE_LIMIT_BYTES = "syncResponseLimitBytes";
+    public static final long DEFAULT_SYNC_RESPONSE_LIMIT_BYTES = 1048576L;
+    public static final String SYNC_RETRY_COUNT = "syncRetryCount";
+    public static final int DEFAULT_SYNC_RETRY_COUNT = 0;
+
+    // Dynamic property to request synchronous delivery.
+    public static final String ADAPTER_MESSAGE_HTTP_SYNC = "http.sync";
 }
