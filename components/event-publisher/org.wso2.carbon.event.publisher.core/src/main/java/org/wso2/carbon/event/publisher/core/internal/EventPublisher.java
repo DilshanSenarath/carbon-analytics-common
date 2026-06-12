@@ -450,6 +450,61 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
     @Override
     public void onEventWithErrorPropagation(Event event) throws EventStreamException {
 
+        sendEventWithErrorPropagation(event);
+    }
+
+    private void sendEventWithErrorPropagation(Event event) throws EventStreamException {
+
+        if (isPolled) {
+            if (sendToOther) {
+                EventPublisherServiceValueHolder.getEventManagementService()
+                        .syncEvent(syncId, Manager.ManagerType.Publisher, event);
+            }
+            processWithErrorPropagation(event);
+        } else {
+            if (!EventPublisherServiceValueHolder.getCarbonEventPublisherManagementService().isDrop()) {
+                if (mode == Mode.HA) {
+                    long currentTime = EventPublisherServiceValueHolder.getEventManagementService().getClusterTimeInMillis();
+                    if (!eventQueue.isEmpty()) {
+                        long lastProcessedTime = EventPublisherServiceValueHolder.getEventManagementService()
+                                .getLatestEventSentTime(eventPublisherConfiguration.getEventPublisherName(), tenantId);
+                        while (!eventQueue.isEmpty()) {
+                            EventWrapper eventWrapper = eventQueue.poll();
+                            if (eventWrapper.getTimestampInMillis() > lastProcessedTime) {
+                                process(eventWrapper.getEvent());
+                            }
+                        }
+                    }
+                    EventPublisherServiceValueHolder.getEventManagementService().updateLatestEventSentTime(
+                            eventPublisherConfiguration.getEventPublisherName(), tenantId, currentTime);
+                }
+                processWithErrorPropagation(event);
+            } else {
+                if (mode == Mode.HA) {
+                    long currentTime = EventPublisherServiceValueHolder.getEventManagementService().getClusterTimeInMillis();
+                    EventWrapper eventWrapper = new EventWrapper(event, currentTime);
+                    while (!eventQueue.offer(eventWrapper)) {
+                        EventWrapper wrapper = eventQueue.poll();
+                        if (log.isDebugEnabled()) {
+                            log.debug("Dropping event arrived at " + wrapper.getTimestampInMillis() +
+                                    " due to insufficient capacity at Event Publisher Queue, dropped event: " +
+                                    wrapper.getEvent());
+                        }
+                    }
+                    long lastProcessedTime = EventPublisherServiceValueHolder.getEventManagementService()
+                            .getLatestEventSentTime(eventPublisherConfiguration.getEventPublisherName(), tenantId);
+                    synchronized (this) {
+                        while (!eventQueue.isEmpty() && eventQueue.peek().getTimestampInMillis() <= lastProcessedTime) {
+                            eventQueue.remove();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void processWithErrorPropagation(Event event) throws EventStreamException {
+
         Map<String, String> dynamicProperties = new HashMap<String, String>(
                 eventPublisherConfiguration.getToAdapterDynamicProperties());
         Object outObject;

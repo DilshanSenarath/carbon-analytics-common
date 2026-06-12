@@ -96,15 +96,16 @@ public interface EventStreamService {
 
     /**
      * Publishes an event to the stream using the error-propagating path. Every subscribed consumer
-     * is invoked regardless of whether a previous consumer failed. If any consumers fail, all their
-     * failures are collected and thrown together as an
-     * {@link org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException}, which
-     * exposes each individual failure via
+     * is invoked regardless of whether a previous consumer failed. If exactly one consumer fails, a
+     * {@link org.wso2.carbon.event.stream.core.exception.ConsumerFailureException} is thrown. If
+     * multiple consumers fail, an
+     * {@link org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException} is
+     * thrown; individual failures are accessible via
      * {@link org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException#getFailures()}.
      *
      * @param event Event to publish.
-     * @throws org.wso2.carbon.event.stream.core.exception.AggregatedConsumerFailureException If one or
-     *         more consumers failed to process the event.
+     * @throws org.wso2.carbon.event.stream.core.exception.EventStreamException If one or more
+     *         consumers failed to process the event.
      */
     public default void publishWithErrorPropagation(Event event) throws EventStreamException {
 
