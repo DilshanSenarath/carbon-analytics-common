@@ -32,7 +32,10 @@ public class AggregatedConsumerFailureException extends EventStreamException {
 
     public AggregatedConsumerFailureException(List<ConsumerFailureException> failures) {
 
-        super(buildMessage(failures));
+        super(failures.isEmpty()
+                ? EventStreamConstants.ErrorMessage.EVENT_DISPATCH_NO_FAILURES.getCode()
+                : EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED.getCode(),
+                buildMessage(failures));
         this.failures = Collections.unmodifiableList(failures);
     }
 
@@ -44,7 +47,7 @@ public class AggregatedConsumerFailureException extends EventStreamException {
     private static String buildMessage(List<ConsumerFailureException> failures) {
 
         if (failures.isEmpty()) {
-            return EventStreamConstants.ErrorMessage.EVENT_DISPATCH_NO_FAILURES.getDescription();
+            return EventStreamConstants.ErrorMessage.EVENT_DISPATCH_NO_FAILURES.getMessage();
         }
         StringBuilder failureList = new StringBuilder();
         for (int i = 0; i < failures.size(); i++) {
@@ -54,6 +57,6 @@ public class AggregatedConsumerFailureException extends EventStreamException {
             failureList.append('[').append(failures.get(i)).append(']');
         }
         return EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED
-                .formatDescription(failures.size(), failureList.toString());
+                .formatMessage(failures.size(), failureList.toString());
     }
 }

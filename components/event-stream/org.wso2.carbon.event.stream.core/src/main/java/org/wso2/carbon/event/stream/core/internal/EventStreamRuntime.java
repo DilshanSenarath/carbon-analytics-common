@@ -129,8 +129,8 @@ public class EventStreamRuntime {
 
         Map<String, EventJunction> eventJunctionMap = tenantSpecificEventJunctions.get(tenantId);
         if (eventJunctionMap == null || !eventJunctionMap.containsKey(streamId)) {
-            throw new EventStreamException(EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM
-                    .formatDescription(streamId, tenantId));
+            throw new EventStreamException(EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM.getCode(),
+                    EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM.formatMessage(streamId, tenantId));
         }
         eventJunctionMap.get(streamId).sendEventWithErrorPropagation(event);
     }

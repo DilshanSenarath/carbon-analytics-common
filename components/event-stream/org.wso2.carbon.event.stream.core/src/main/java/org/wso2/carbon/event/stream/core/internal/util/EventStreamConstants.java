@@ -73,48 +73,39 @@ public interface EventStreamConstants {
 
         CONSUMER_FAILURE(
                 "ES-65000",
-                "Stream consumer failed to process event.",
                 "Consumer '%s' on stream '%s' failed: %s"),
 
         EVENT_DISPATCH_NO_FAILURES(
                 "ES-65001",
-                "Event dispatch signalled failure but recorded no individual errors.",
                 "Event dispatch failed with no recorded failures."),
 
         MULTIPLE_CONSUMERS_FAILED(
                 "ES-65002",
-                "Multiple stream consumers failed to process event.",
                 "%d consumer(s) failed to process event: %s"),
 
         PRODUCER_PROPAGATION_NOT_IMPLEMENTED(
                 "ES-65003",
-                "Error propagation is not implemented for this event producer.",
                 "sendEventWithErrorPropagation is not implemented for this producer."),
 
         NO_JUNCTION_FOR_STREAM(
                 "ES-65004",
-                "No event junction found for the requested stream.",
                 "No junction found for stream '%s' on tenant %d; cannot deliver event.");
 
         private final String code;
         private final String message;
-        private final String description;
 
-        ErrorMessage(String code, String message, String description) {
+        ErrorMessage(String code, String message) {
             this.code = code;
             this.message = message;
-            this.description = description;
         }
 
         public String getCode() { return code; }
 
         public String getMessage() { return message; }
 
-        public String getDescription() { return description; }
-
-        public String formatDescription(Object... args) { return String.format(description, args); }
+        public String formatMessage(Object... args) { return String.format(message, args); }
 
         @Override
-        public String toString() { return code + " | " + message + " | " + description; }
+        public String toString() { return code + " | " + message; }
     }
 }

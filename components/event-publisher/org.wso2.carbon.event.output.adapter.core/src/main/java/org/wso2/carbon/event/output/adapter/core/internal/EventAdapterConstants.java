@@ -42,48 +42,39 @@ public final class EventAdapterConstants {
 
         SYNC_CONNECT_UNSUPPORTED(
                 "OA-65000",
-                "Synchronous connection is not supported by this adapter type.",
                 "Synchronous connection is not supported by this adapter type."),
 
         SYNC_DISCONNECT_UNSUPPORTED(
                 "OA-65001",
-                "Synchronous disconnection is not supported by this adapter type.",
                 "Synchronous disconnection is not supported by this adapter type."),
 
         SYNC_PUBLISH_UNSUPPORTED(
                 "OA-65002",
-                "Synchronous publishing is not supported by this adapter type.",
                 "Synchronous publishing is not supported by this adapter type."),
 
         SYNC_PATH_DISCONNECT_FAILED(
                 "OA-65003",
-                "Failed to disconnect the synchronous publish path for the output adapter.",
                 "Error disconnecting sync path for Output Adapter '%s'."),
 
         SYNC_PUBLISH_FAILED(
                 "OA-65004",
-                "Output adapter failed to publish the event synchronously.",
                 "Output Adapter '%s' failed to publish synchronously.");
 
         private final String code;
         private final String message;
-        private final String description;
 
-        ErrorMessage(String code, String message, String description) {
+        ErrorMessage(String code, String message) {
             this.code = code;
             this.message = message;
-            this.description = description;
         }
 
         public String getCode() { return code; }
 
         public String getMessage() { return message; }
 
-        public String getDescription() { return description; }
-
-        public String formatDescription(Object... args) { return String.format(description, args); }
+        public String formatMessage(Object... args) { return String.format(message, args); }
 
         @Override
-        public String toString() { return code + " | " + message + " | " + description; }
+        public String toString() { return code + " | " + message; }
     }
 }

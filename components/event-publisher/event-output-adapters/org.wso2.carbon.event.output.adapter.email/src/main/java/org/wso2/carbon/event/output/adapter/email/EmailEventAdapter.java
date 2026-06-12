@@ -368,7 +368,8 @@ public class EmailEventAdapter implements OutputEventAdapter {
         String emailAddress = dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_ADDRESS);
         if (StringUtils.isBlank(emailAddress)) {
             throw new OutputEventAdapterException(
-                    EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_MISSING_ADDRESS.getDescription());
+                    EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_MISSING_ADDRESS.getCode(),
+                    EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_MISSING_ADDRESS.getMessage());
         }
         String[] emailIds = emailAddress.replaceAll(" ", "").split(EmailEventAdapterConstants.EMAIL_SEPARATOR);
         String emailType = dynamicProperties.get(EmailEventAdapterConstants.APAPTER_MESSAGE_EMAIL_TYPE);
@@ -382,7 +383,8 @@ public class EmailEventAdapter implements OutputEventAdapter {
                 buildAndSendEmail(email, subject, message.toString(), emailType);
             } catch (MessagingException | UnsupportedEncodingException e) {
                 throw new OutputEventAdapterException(
-                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.formatDescription(email), e);
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.formatMessage(email), e);
             }
         }
     }

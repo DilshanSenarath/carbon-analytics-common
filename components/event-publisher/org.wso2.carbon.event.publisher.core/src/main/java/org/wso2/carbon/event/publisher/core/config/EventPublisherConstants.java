@@ -135,33 +135,27 @@ public final class EventPublisherConstants {
 
         EVENT_MAPPING_FAILED(
                 "EP-65000",
-                "Failed to map the event for publishing.",
                 "Cannot map event from publisher '%s': %s"),
 
         SYNC_DELIVERY_FAILED(
                 "EP-65001",
-                "Synchronous event delivery failed.",
                 "Synchronous delivery failed for publisher '%s'.");
 
         private final String code;
         private final String message;
-        private final String description;
 
-        ErrorMessage(String code, String message, String description) {
+        ErrorMessage(String code, String message) {
             this.code = code;
             this.message = message;
-            this.description = description;
         }
 
         public String getCode() { return code; }
 
         public String getMessage() { return message; }
 
-        public String getDescription() { return description; }
-
-        public String formatDescription(Object... args) { return String.format(description, args); }
+        public String formatMessage(Object... args) { return String.format(message, args); }
 
         @Override
-        public String toString() { return code + " | " + message + " | " + description; }
+        public String toString() { return code + " | " + message; }
     }
 }

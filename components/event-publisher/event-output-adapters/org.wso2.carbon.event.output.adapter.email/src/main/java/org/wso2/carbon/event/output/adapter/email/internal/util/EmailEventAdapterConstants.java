@@ -98,33 +98,27 @@ public class EmailEventAdapterConstants {
 
         SYNC_EMAIL_SEND_FAILED(
                 "EMAIL-OA-65000",
-                "Failed to send email synchronously.",
                 "Failed to send email to '%s'."),
 
         SYNC_EMAIL_MISSING_ADDRESS(
                 "EMAIL-OA-65001",
-                "Email address is missing for synchronous delivery.",
                 "Cannot send email synchronously: the email address dynamic property is not set.");
 
         private final String code;
         private final String message;
-        private final String description;
 
-        ErrorMessage(String code, String message, String description) {
+        ErrorMessage(String code, String message) {
             this.code = code;
             this.message = message;
-            this.description = description;
         }
 
         public String getCode() { return code; }
 
         public String getMessage() { return message; }
 
-        public String getDescription() { return description; }
-
-        public String formatDescription(Object... args) { return String.format(description, args); }
+        public String formatMessage(Object... args) { return String.format(message, args); }
 
         @Override
-        public String toString() { return code + " | " + message + " | " + description; }
+        public String toString() { return code + " | " + message; }
     }
 }

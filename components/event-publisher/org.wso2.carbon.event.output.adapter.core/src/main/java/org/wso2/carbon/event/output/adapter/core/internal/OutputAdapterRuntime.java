@@ -139,11 +139,11 @@ public class OutputAdapterRuntime {
                     outputEventAdapter.disconnectSync();
                 } catch (OutputEventAdapterException disconnectEx) {
                     log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
-                            .formatDescription(name), disconnectEx);
+                            .formatMessage(name), disconnectEx);
                 }
             }
-            throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED
-                    .formatDescription(name), e);
+            throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED.getCode(),
+                    EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED.formatMessage(name), e);
         }
     }
 
@@ -174,7 +174,7 @@ public class OutputAdapterRuntime {
                     outputEventAdapter.disconnectSync();
                 } catch (OutputEventAdapterException e) {
                     log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
-                            .formatDescription(name), e);
+                            .formatMessage(name), e);
                 }
             }
         } finally {

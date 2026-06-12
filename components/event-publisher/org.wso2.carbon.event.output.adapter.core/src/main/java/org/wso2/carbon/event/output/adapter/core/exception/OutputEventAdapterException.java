@@ -15,19 +15,43 @@
 package org.wso2.carbon.event.output.adapter.core.exception;
 
 public class OutputEventAdapterException extends Exception {
+
+    private final String errorCode;
+
     public OutputEventAdapterException() {
+
+        this.errorCode = null;
     }
 
     public OutputEventAdapterException(String message) {
+
         super(message);
+        this.errorCode = null;
     }
 
     public OutputEventAdapterException(String message, Throwable cause) {
+
         super(message, cause);
+        this.errorCode = null;
     }
 
     public OutputEventAdapterException(Throwable cause) {
+        
         super(cause);
+        this.errorCode = null;
     }
 
+    public OutputEventAdapterException(String errorCode, String message) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
+    public OutputEventAdapterException(String errorCode, String message, Throwable cause) {
+        super(message, cause);
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
+    }
 }

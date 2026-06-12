@@ -457,8 +457,9 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
         try {
             outObject = buildOutputMessage(event, dynamicProperties);
         } catch (EventPublisherConfigurationException e) {
-            throw new EventStreamException(EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED
-                    .formatDescription(eventPublisherConfiguration.getEventPublisherName(), e.getMessage()), e);
+            throw new EventStreamException(EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED.getCode(),
+                    EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED
+                            .formatMessage(eventPublisherConfiguration.getEventPublisherName(), e.getMessage()), e);
         }
 
         if (outObject == null) {
@@ -472,8 +473,11 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
             try {
                 eventAdapterService.publishSync(publisherName, dynamicProperties, outObject);
             } catch (OutputEventAdapterException e) {
-                throw new EventStreamException(EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED
-                        .formatDescription(publisherName), e);
+                String errorCode = e.getErrorCode() != null
+                        ? e.getErrorCode()
+                        : EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.getCode();
+                throw new EventStreamException(errorCode,
+                        EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.formatMessage(publisherName), e);
             }
         } else {
             eventAdapterService.publish(publisherName, dynamicProperties, outObject);

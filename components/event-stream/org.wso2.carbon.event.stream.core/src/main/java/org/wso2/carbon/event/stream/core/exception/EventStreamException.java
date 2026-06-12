@@ -23,22 +23,45 @@ package org.wso2.carbon.event.stream.core.exception;
  */
 public class EventStreamException extends Exception {
 
+    private final String errorCode;
+
     public EventStreamException() {
 
+        this.errorCode = null;
     }
 
     public EventStreamException(String message) {
 
         super(message);
+        this.errorCode = null;
     }
 
     public EventStreamException(String message, Throwable cause) {
 
         super(message, cause);
+        this.errorCode = null;
     }
 
     public EventStreamException(Throwable cause) {
-        
+
         super(cause);
+        this.errorCode = null;
+    }
+
+    public EventStreamException(String errorCode, String message) {
+
+        super(message);
+        this.errorCode = errorCode;
+    }
+
+    public EventStreamException(String errorCode, String message, Throwable cause) {
+
+        super(message, cause);
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorCode() {
+        
+        return errorCode;
     }
 }

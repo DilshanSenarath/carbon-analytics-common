@@ -290,7 +290,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         configBuilder.proxyHost(proxyHost).proxyPort(Integer.parseInt(proxyPort));
                     } catch (NumberFormatException e) {
                         log.error(HTTPEventAdapterConstants.ErrorMessage.SYNC_INVALID_PROXY_PORT
-                                .formatDescription(proxyPort), e);
+                                .formatMessage(proxyPort), e);
                     }
                 }
                 int syncRetryCount = getGlobalIntProperty(
@@ -298,8 +298,10 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         HTTPEventAdapterConstants.DEFAULT_SYNC_RETRY_COUNT);
                 syncHttpClientManager = new SyncHttpClientManager(configBuilder.build(), syncRetryCount);
             } catch (APIClientException e) {
-                throw new OutputEventAdapterException(HTTPEventAdapterConstants.ErrorMessage
-                        .SYNC_CLIENT_INIT_FAILED.formatDescription(eventAdapterConfiguration.getName()), e);
+                throw new OutputEventAdapterException(
+                        HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED.getCode(),
+                        HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED
+                                .formatMessage(eventAdapterConfiguration.getName()), e);
             }
         }
         initContentType();
@@ -316,8 +318,10 @@ public class HTTPEventAdapter implements OutputEventAdapter {
             throws OutputEventAdapterException {
 
         if (syncHttpClientManager == null) {
-            throw new OutputEventAdapterException(HTTPEventAdapterConstants.ErrorMessage
-                    .SYNC_CLIENT_NOT_INITIALIZED.formatDescription(eventAdapterConfiguration.getName()));
+            throw new OutputEventAdapterException(
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_NOT_INITIALIZED.getCode(),
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_NOT_INITIALIZED
+                            .formatMessage(eventAdapterConfiguration.getName()));
         }
         String url = dynamicProperties.get(HTTPEventAdapterConstants.ADAPTER_MESSAGE_URL);
         String authType = eventAdapterConfiguration.getStaticProperties()
@@ -386,8 +390,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                             "Received error response from external endpoint: " + url +
                                     " after token refresh for HTTP-based sync email publishing.",
                             DiagnosticLog.ResultStatus.FAILED, retryParams);
-                    throw new OutputEventAdapterException(
-                            resolveHttpErrorMessage(retryCode, url, retryResponse.getResponseBody()));
+                    throw resolveHttpError(retryCode, url, retryResponse.getResponseBody());
                 }
                 try {
                     encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN, newToken);
@@ -414,12 +417,12 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         "Received error response from external endpoint: " + url +
                                 " for HTTP-based sync email publishing.",
                         DiagnosticLog.ResultStatus.FAILED, params);
-                throw new OutputEventAdapterException(
-                        resolveHttpErrorMessage(responseCode, url, response.getResponseBody()));
+                throw resolveHttpError(responseCode, url, response.getResponseBody());
             }
         } catch (APIClientException e) {
             throw new OutputEventAdapterException(
-                    HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED_IO.formatDescription(url), e);
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED_IO.getCode(),
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED_IO.formatMessage(url), e);
         }
     }
 
@@ -644,33 +647,42 @@ public class HTTPEventAdapter implements OutputEventAdapter {
         return defaultValue;
     }
 
-    private static String resolveHttpErrorMessage(int statusCode, String url, String responseBody) {
+    private static OutputEventAdapterException resolveHttpError(int statusCode, String url, String responseBody) {
 
+        HTTPEventAdapterConstants.ErrorMessage error;
+        String message;
         switch (statusCode) {
             case 400:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_BAD_REQUEST
-                        .formatDescription(url, responseBody);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_BAD_REQUEST;
+                message = error.formatMessage(url, responseBody);
+                break;
             case 401:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_UNAUTHORIZED
-                        .formatDescription(url);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_UNAUTHORIZED;
+                message = error.formatMessage(url);
+                break;
             case 403:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FORBIDDEN
-                        .formatDescription(url);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FORBIDDEN;
+                message = error.formatMessage(url);
+                break;
             case 429:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_TOO_MANY_REQUESTS
-                        .formatDescription(url);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_TOO_MANY_REQUESTS;
+                message = error.formatMessage(url);
+                break;
             case 500:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_SERVER_ERROR
-                        .formatDescription(url, responseBody);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_SERVER_ERROR;
+                message = error.formatMessage(url, responseBody);
+                break;
             case 502:
             case 503:
             case 504:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_SERVICE_UNAVAILABLE
-                        .formatDescription(url, statusCode);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_SERVICE_UNAVAILABLE;
+                message = error.formatMessage(url, statusCode);
+                break;
             default:
-                return HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED_WITH_RESPONSE
-                        .formatDescription(url, statusCode, responseBody);
+                error = HTTPEventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED_WITH_RESPONSE;
+                message = error.formatMessage(url, statusCode, responseBody);
         }
+        return new OutputEventAdapterException(error.getCode(), message);
     }
 
     private String fetchNewAccessToken() throws OutputEventAdapterException {
@@ -683,8 +695,10 @@ public class HTTPEventAdapter implements OutputEventAdapter {
         } catch (SecretManagementException e) {
             if (StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID))
                     || StringUtils.isBlank(eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET))) {
-                throw new OutputEventAdapterException(HTTPEventAdapterConstants.ErrorMessage
-                        .SYNC_TOKEN_REFRESH_MISSING_CREDS.formatDescription(eventAdapterConfiguration.getName()));
+                throw new OutputEventAdapterException(
+                        HTTPEventAdapterConstants.ErrorMessage.SYNC_TOKEN_REFRESH_MISSING_CREDS.getCode(),
+                        HTTPEventAdapterConstants.ErrorMessage.SYNC_TOKEN_REFRESH_MISSING_CREDS
+                                .formatMessage(eventAdapterConfiguration.getName()));
             }
             clientId = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_ID).toCharArray();
             clientSecret = eventAdapterConfiguration.getStaticProperties().get(ADAPTER_CLIENT_SECRET).toCharArray();
@@ -700,8 +714,10 @@ public class HTTPEventAdapter implements OutputEventAdapter {
             return newToken;
         } catch (OutputEventAdapterRuntimeException e) {
             logEventPublishingFailure("Failed to obtain a new access token for HTTP-based publishing.", e);
-            throw new OutputEventAdapterException(HTTPEventAdapterConstants.ErrorMessage
-                    .SYNC_TOKEN_FETCH_FAILED.formatDescription(eventAdapterConfiguration.getName()), e);
+            throw new OutputEventAdapterException(
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_TOKEN_FETCH_FAILED.getCode(),
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_TOKEN_FETCH_FAILED
+                            .formatMessage(eventAdapterConfiguration.getName()), e);
         }
     }
 

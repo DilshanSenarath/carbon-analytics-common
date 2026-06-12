@@ -30,8 +30,9 @@ public final class ConsumerFailureException extends EventStreamException {
 
     public ConsumerFailureException(String consumerType, String streamId, Throwable cause) {
 
-        super(EventStreamConstants.ErrorMessage.CONSUMER_FAILURE
-                .formatDescription(consumerType, streamId, cause.getMessage()), cause);
+        super(EventStreamConstants.ErrorMessage.CONSUMER_FAILURE.getCode(),
+                EventStreamConstants.ErrorMessage.CONSUMER_FAILURE
+                        .formatMessage(consumerType, streamId, cause.getMessage()), cause);
         this.consumerType = consumerType;
         this.streamId = streamId;
     }

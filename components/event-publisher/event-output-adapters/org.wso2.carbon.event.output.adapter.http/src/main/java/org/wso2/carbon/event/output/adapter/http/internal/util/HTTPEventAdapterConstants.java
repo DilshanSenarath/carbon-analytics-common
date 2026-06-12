@@ -146,88 +146,71 @@ public class HTTPEventAdapterConstants {
 
         SYNC_CLIENT_INIT_FAILED(
                 "HTTP-OA-65000",
-                "Could not set up the connection for synchronous publishing.",
                 "Adapter '%s' could not be configured for synchronous publishing. Check the adapter settings and try again."),
 
         SYNC_CLIENT_NOT_INITIALIZED(
                 "HTTP-OA-65001",
-                "Adapter is not ready to publish.",
                 "Adapter '%s' is not ready; the connection has not been established. Ensure the adapter initialised successfully."),
 
         SYNC_PUBLISH_FAILED_WITH_RESPONSE(
                 "HTTP-OA-65002",
-                "The endpoint returned an unexpected response.",
                 "Publishing to '%s' failed. Received HTTP %d. Server response: %s"),
 
         SYNC_PUBLISH_UNAUTHORIZED(
                 "HTTP-OA-65003",
-                "The endpoint rejected the request: credentials are invalid or missing.",
                 "Publishing to '%s' failed with HTTP 401 (Unauthorized). Verify that the configured credentials or access token are correct and have not expired."),
 
         SYNC_PUBLISH_FORBIDDEN(
                 "HTTP-OA-65004",
-                "The endpoint rejected the request: access is not permitted.",
                 "Publishing to '%s' failed with HTTP 403 (Forbidden). The configured account does not have permission to publish to this endpoint."),
 
         SYNC_PUBLISH_BAD_REQUEST(
                 "HTTP-OA-65005",
-                "The endpoint could not process the request: the data sent is invalid.",
                 "Publishing to '%s' failed with HTTP 400 (Bad Request). Check the event format and required fields. Server response: %s"),
 
         SYNC_PUBLISH_TOO_MANY_REQUESTS(
                 "HTTP-OA-65006",
-                "The endpoint is receiving too many requests.",
                 "Publishing to '%s' failed with HTTP 429 (Too Many Requests). Reduce the publishing rate or wait before retrying."),
 
         SYNC_PUBLISH_SERVICE_UNAVAILABLE(
                 "HTTP-OA-65007",
-                "The endpoint is temporarily unavailable.",
                 "Publishing to '%s' failed with HTTP %d. The server is temporarily unavailable. Wait a moment and retry."),
 
         SYNC_PUBLISH_SERVER_ERROR(
                 "HTTP-OA-65008",
-                "The endpoint encountered an unexpected error.",
                 "Publishing to '%s' failed with HTTP 500. The server could not process the request. Server response: %s"),
 
         SYNC_PUBLISH_FAILED_IO(
                 "HTTP-OA-65009",
-                "The connection to the endpoint could not be completed.",
                 "Publishing to '%s' failed. The connection to the server was interrupted or timed out. Check network connectivity and that the endpoint is reachable."),
 
         SYNC_TOKEN_REFRESH_MISSING_CREDS(
                 "HTTP-OA-65010",
-                "Cannot refresh the access token: credentials are not configured.",
                 "Adapter '%s' could not obtain a new access token because the client ID or client secret is missing. Verify the adapter credentials."),
 
         SYNC_TOKEN_FETCH_FAILED(
                 "HTTP-OA-65011",
-                "Failed to obtain a new access token.",
                 "Adapter '%s' could not obtain a new access token. The token endpoint may be unavailable or the credentials may be incorrect."),
 
         SYNC_INVALID_PROXY_PORT(
                 "HTTP-OA-65012",
-                "The configured proxy port is not a valid number; proxy will be skipped.",
                 "Proxy port '%s' is not valid. The proxy configuration will be ignored for this adapter.");
 
         private final String code;
         private final String message;
-        private final String description;
 
-        ErrorMessage(String code, String message, String description) {
+        ErrorMessage(String code, String message) {
             this.code = code;
             this.message = message;
-            this.description = description;
         }
 
         public String getCode() { return code; }
 
         public String getMessage() { return message; }
 
-        public String getDescription() { return description; }
-
-        public String formatDescription(Object... args) { return String.format(description, args); }
+        public String formatMessage(Object... args) { return String.format(message, args); }
 
         @Override
-        public String toString() { return code + " | " + message + " | " + description; }
+        public String toString() { return code + " | " + message; }
     }
 }

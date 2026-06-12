@@ -76,8 +76,8 @@ public interface OutputEventAdapter {
      */
     default void connectSync() throws ConnectionUnavailableException, OutputEventAdapterException {
 
-        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage
-                .SYNC_CONNECT_UNSUPPORTED.getDescription());
+        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_CONNECT_UNSUPPORTED.getCode(),
+                EventAdapterConstants.ErrorMessage.SYNC_CONNECT_UNSUPPORTED.getMessage());
     }
 
     /**
@@ -92,8 +92,8 @@ public interface OutputEventAdapter {
      */
     default void disconnectSync() throws OutputEventAdapterException {
         
-        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage
-                .SYNC_DISCONNECT_UNSUPPORTED.getDescription());
+        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_DISCONNECT_UNSUPPORTED.getCode(),
+                EventAdapterConstants.ErrorMessage.SYNC_DISCONNECT_UNSUPPORTED.getMessage());
     }
 
     /**
@@ -118,8 +118,8 @@ public interface OutputEventAdapter {
     default void publishSync(Object message, Map<String, String> dynamicProperties)
             throws OutputEventAdapterException {
 
-        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage
-                .SYNC_PUBLISH_UNSUPPORTED.getDescription());
+        throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_UNSUPPORTED.getCode(),
+                EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_UNSUPPORTED.getMessage());
     }
 
     /**

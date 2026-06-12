@@ -41,8 +41,9 @@ public interface EventProducerCallback {
      */
     default void sendEventWithErrorPropagation(Event event) throws EventStreamException {
 
-        throw new EventStreamException(EventStreamConstants.ErrorMessage
-                .PRODUCER_PROPAGATION_NOT_IMPLEMENTED.getDescription());
+        throw new EventStreamException(
+                EventStreamConstants.ErrorMessage.PRODUCER_PROPAGATION_NOT_IMPLEMENTED.getCode(),
+                EventStreamConstants.ErrorMessage.PRODUCER_PROPAGATION_NOT_IMPLEMENTED.getMessage());
     }
 
 }
