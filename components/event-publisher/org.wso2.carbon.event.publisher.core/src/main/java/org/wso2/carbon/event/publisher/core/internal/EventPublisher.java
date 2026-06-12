@@ -24,7 +24,9 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.databridge.commons.Attribute;
 import org.wso2.carbon.databridge.commons.Event;
 import org.wso2.carbon.databridge.commons.StreamDefinition;
+import org.wso2.carbon.event.output.adapter.core.OutputEventAdapterSchema;
 import org.wso2.carbon.event.output.adapter.core.OutputEventAdapterService;
+import org.wso2.carbon.event.output.adapter.core.Property;
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterException;
 import org.wso2.carbon.event.processor.manager.core.EventManagementUtil;
 import org.wso2.carbon.event.processor.manager.core.EventSync;
@@ -44,9 +46,12 @@ import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 
@@ -66,6 +71,7 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
     private String beforeTracerPrefix;
     private String afterTracerPrefix;
     private boolean dynamicMessagePropertyEnabled = false;
+    private Set<String> implicitDynamicPropertyKeys = Collections.emptySet();
     private boolean customMappingEnabled = false;
     private boolean isPolled = false;
     private Mode mode = Mode.SingleNode;
@@ -129,6 +135,21 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
         if (dynamicMessagePropertyList.size() > 0) {
             dynamicMessagePropertyEnabled = true;
+        }
+
+        String adapterType = eventPublisherConfiguration.getToAdapterConfiguration().getType();
+        OutputEventAdapterSchema adapterSchema = EventPublisherServiceValueHolder
+                .getOutputEventAdapterService().getOutputEventAdapterSchema(adapterType);
+        if (adapterSchema != null && adapterSchema.getDynamicPropertyList() != null) {
+            Set<String> implicitKeys = new HashSet<>();
+            for (Property property : adapterSchema.getDynamicPropertyList()) {
+                if (property.isImplicit()) {
+                    implicitKeys.add(property.getPropertyName());
+                }
+            }
+            if (!implicitKeys.isEmpty()) {
+                implicitDynamicPropertyKeys = Collections.unmodifiableSet(implicitKeys);
+            }
         }
 
         try {
@@ -309,6 +330,25 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
     }
 
+    private void injectImplicitDynamicProperties(Event event, Map<String, String> dynamicProperties) {
+        
+        if (implicitDynamicPropertyKeys.isEmpty()) {
+            return;
+        }
+        Map<String, String> arbitraryDataMap = event.getArbitraryDataMap();
+        if (arbitraryDataMap == null || arbitraryDataMap.isEmpty()) {
+            return;
+        }
+        for (String key : implicitDynamicPropertyKeys) {
+            if (!dynamicProperties.containsKey(key) && arbitraryDataMap.containsKey(key)) {
+                String value = arbitraryDataMap.get(key);
+                if (value != null) {
+                    dynamicProperties.put(key, value);
+                }
+            }
+        }
+    }
+
     private List<String> getDynamicOutputMessageProperties(String messagePropertyValue) {
         String text = messagePropertyValue;
         while (text.contains("{{") && text.indexOf("}}") > 0) {
@@ -399,6 +439,7 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 //        }
 
 
+        injectImplicitDynamicProperties(event, dynamicProperties);
         eventAdapterService.publish(eventPublisherConfiguration.getEventPublisherName(), dynamicProperties, outObject);
     }
 
@@ -416,6 +457,7 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
                     .formatDescription(eventPublisherConfiguration.getEventPublisherName(), e.getMessage()), e);
         }
 
+        injectImplicitDynamicProperties(event, dynamicProperties);
         OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
         String publisherName = eventPublisherConfiguration.getEventPublisherName();
         if (eventAdapterService.isSync(publisherName, dynamicProperties)) {

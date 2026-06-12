@@ -137,6 +137,7 @@ public class HTTPEventAdapterConstants {
 
     // Dynamic property to request synchronous delivery.
     public static final String ADAPTER_MESSAGE_HTTP_SYNC = "http.sync";
+    public static final String ADAPTER_MESSAGE_HTTP_SYNC_HINT = "http.sync.hint";
 
     /**
      * Error messages for the HTTP adapter sync publish path.
