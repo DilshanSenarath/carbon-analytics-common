@@ -420,6 +420,10 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
             return;
         }
 
+        if (outObject == null) {
+            return;
+        }
+
         OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
 //
 //        long timestamp = event.getTimeStamp();
@@ -455,6 +459,10 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
         } catch (EventPublisherConfigurationException e) {
             throw new EventStreamException(EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED
                     .formatDescription(eventPublisherConfiguration.getEventPublisherName(), e.getMessage()), e);
+        }
+
+        if (outObject == null) {
+            return;
         }
 
         injectImplicitDynamicProperties(event, dynamicProperties);

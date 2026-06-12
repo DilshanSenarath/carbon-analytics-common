@@ -583,7 +583,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
     private record AuthHeader(String name, String value) {}
 
     private static Optional<AuthHeader> buildAuthHeader(String authType, Map<String, String> authProperties) {
-        if (authType == null) {
+        if (StringUtils.isBlank(authType)) {
             String user = authProperties != null ? authProperties.get(USERNAME) : null;
             String pass = authProperties != null ? authProperties.get(PASSWORD) : null;
             if (StringUtils.isNotBlank(user)) {

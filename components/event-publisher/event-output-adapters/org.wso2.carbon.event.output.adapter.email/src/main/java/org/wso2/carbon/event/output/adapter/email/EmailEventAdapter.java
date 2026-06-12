@@ -365,8 +365,12 @@ public class EmailEventAdapter implements OutputEventAdapter {
 
         //Get subject and emailIds from dynamic properties
         String subject = dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SUBJECT);
-        String[] emailIds = dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_ADDRESS)
-                .replaceAll(" ", "").split(EmailEventAdapterConstants.EMAIL_SEPARATOR);
+        String emailAddress = dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_ADDRESS);
+        if (StringUtils.isBlank(emailAddress)) {
+            throw new OutputEventAdapterException(
+                    EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_MISSING_ADDRESS.getDescription());
+        }
+        String[] emailIds = emailAddress.replaceAll(" ", "").split(EmailEventAdapterConstants.EMAIL_SEPARATOR);
         String emailType = dynamicProperties.get(EmailEventAdapterConstants.APAPTER_MESSAGE_EMAIL_TYPE);
 
         //Send email for each emailId

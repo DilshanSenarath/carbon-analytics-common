@@ -99,7 +99,12 @@ public class EmailEventAdapterConstants {
         SYNC_EMAIL_SEND_FAILED(
                 "EMAIL-OA-65000",
                 "Failed to send email synchronously.",
-                "Failed to send email to '%s'.");
+                "Failed to send email to '%s'."),
+
+        SYNC_EMAIL_MISSING_ADDRESS(
+                "EMAIL-OA-65001",
+                "Email address is missing for synchronous delivery.",
+                "Cannot send email synchronously: the email address dynamic property is not set.");
 
         private final String code;
         private final String message;
