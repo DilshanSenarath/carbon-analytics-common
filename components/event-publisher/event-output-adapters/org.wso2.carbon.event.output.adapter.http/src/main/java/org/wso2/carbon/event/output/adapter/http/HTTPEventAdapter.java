@@ -310,13 +310,14 @@ public class HTTPEventAdapter implements OutputEventAdapter {
     @Override
     public void disconnectSync() {
 
+        if (syncHttpClientManager == null) {
+            return;
+        }
         try {
-             syncHttpClientManager.close();
+            syncHttpClientManager.close();
         } catch (IOException exception) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while closing the HTTP sync client for adapter: "
-                        + eventAdapterConfiguration.getName(), exception);
-            }
+            log.warn("Error occurred while closing the HTTP sync client for adapter: "
+                    + eventAdapterConfiguration.getName(), exception);
         } finally {
             syncHttpClientManager = null;
         }
@@ -369,7 +370,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                 }
                 logEventPublishing(
                         "Received success response from external endpoint: " + url +
-                                " for HTTP-based sync email publishing.",
+                                " for HTTP-based sync publishing.",
                         DiagnosticLog.ResultStatus.SUCCESS);
             } else if ((responseCode == 401 || responseCode == 403) &&
                     StringUtils.equalsIgnoreCase(CLIENT_CREDENTIAL, authType)) {
@@ -380,9 +381,9 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                             ". Hence refreshing the access token and retrying.");
                 }
                 logEventPublishing(
-                        "Received unauthorized response from external endpoint: " + url +
+                        "Received unauthorized response (HTTP " + responseCode + ") from external endpoint: " + url +
                                 ". Refreshing access token and retrying.",
-                        DiagnosticLog.ResultStatus.SUCCESS);
+                        DiagnosticLog.ResultStatus.FAILED);
                 String newToken = fetchNewAccessToken();
                 Map<String, String> retryHeaders = new HashMap<>(headers);
                 retryHeaders.put("Authorization", "Bearer " + newToken);
@@ -397,14 +398,17 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                             ". Response body: " + retryResponse.getResponseBody());
                     logEventPublishing(
                             "Received error response from external endpoint: " + url +
-                                    " after token refresh for HTTP-based sync email publishing.",
+                                    " after token refresh for HTTP-based sync publishing.",
                             DiagnosticLog.ResultStatus.FAILED, retryParams);
                     throw resolveHttpError(retryCode, url, retryResponse.getResponseBody());
                 }
                 try {
                     encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN, newToken);
                 } catch (SecretManagementException e) {
-                    log.warn("Unable to store the newly generated access token in the secret manager.");
+                    log.warn("Adapter '" + eventAdapterConfiguration.getName() + "': unable to persist the " +
+                            "refreshed access token to the secret manager. Token refresh will repeat on " +
+                            "every publish call until the secret manager is available again. Cause: " +
+                            e.getMessage());
                 }
                 if (log.isDebugEnabled()) {
                     log.debug("[Id: " + uuid + "] Successfully published event to the endpoint: " + url +
@@ -413,7 +417,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                 }
                 logEventPublishing(
                         "Received success response from external endpoint: " + url +
-                                " after token refresh for HTTP-based sync email publishing.",
+                                " after token refresh for HTTP-based sync publishing.",
                         DiagnosticLog.ResultStatus.SUCCESS);
             } else {
                 Map<String, Object> params = new HashMap<>();
@@ -424,7 +428,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         ". Response body: " + response.getResponseBody());
                 logEventPublishing(
                         "Received error response from external endpoint: " + url +
-                                " for HTTP-based sync email publishing.",
+                                " for HTTP-based sync publishing.",
                         DiagnosticLog.ResultStatus.FAILED, params);
                 throw resolveHttpError(responseCode, url, response.getResponseBody());
             }
@@ -738,7 +742,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
             String newToken = getAccessToken(new String(clientId), new String(clientSecret), tokenEndpoint, scopes);
             logEventPublishing(
                     "Access token is successfully retrieved using client credentials grant type " +
-                            "for HTTP-based sync email publishing.",
+                            "for HTTP-based sync publishing.",
                     DiagnosticLog.ResultStatus.SUCCESS);
             return newToken;
         } catch (OutputEventAdapterRuntimeException e) {
