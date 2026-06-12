@@ -310,7 +310,16 @@ public class HTTPEventAdapter implements OutputEventAdapter {
     @Override
     public void disconnectSync() {
 
-        syncHttpClientManager = null;
+        try {
+             syncHttpClientManager.close();
+        } catch (IOException exception) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while closing the HTTP sync client for adapter: "
+                        + eventAdapterConfiguration.getName(), exception);
+            }
+        } finally {
+            syncHttpClientManager = null;
+        }
     }
 
     @Override
