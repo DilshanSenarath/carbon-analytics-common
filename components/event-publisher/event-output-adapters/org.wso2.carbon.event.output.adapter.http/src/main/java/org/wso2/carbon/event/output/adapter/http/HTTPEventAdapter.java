@@ -297,6 +297,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         HTTPEventAdapterConstants.SYNC_RETRY_COUNT,
                         HTTPEventAdapterConstants.DEFAULT_SYNC_RETRY_COUNT);
                 syncHttpClientManager = new SyncHttpClientManager(configBuilder.build(), syncRetryCount);
+                initContentType();
             } catch (APIClientException e) {
                 throw new OutputEventAdapterException(
                         HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED.getCode(),
@@ -304,7 +305,6 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                                 .formatMessage(eventAdapterConfiguration.getName()), e);
             }
         }
-        initContentType();
     }
 
     @Override
@@ -402,6 +402,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                             DiagnosticLog.ResultStatus.FAILED, retryParams);
                     throw resolveHttpError(retryCode, url, retryResponse.getResponseBody());
                 }
+                this.internalAccessToken = newToken;
                 try {
                     encryptAndStoreCredential(provider, CLIENT_CREDENTIAL, INTERNAL_ACCESS_TOKEN, newToken);
                 } catch (SecretManagementException e) {

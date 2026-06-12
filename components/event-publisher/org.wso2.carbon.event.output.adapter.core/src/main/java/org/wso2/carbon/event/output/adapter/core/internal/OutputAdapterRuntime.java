@@ -134,12 +134,14 @@ public class OutputAdapterRuntime {
             outputEventAdapter.publishSync(message, dynamicProperties);
         } catch (ConnectionUnavailableException e) {
             synchronized (this) {
-                syncConnected = false;
-                try {
-                    outputEventAdapter.disconnectSync();
-                } catch (OutputEventAdapterException disconnectEx) {
-                    log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
-                            .formatMessage(name), disconnectEx);
+                if (syncConnected) {
+                    syncConnected = false;
+                    try {
+                        outputEventAdapter.disconnectSync();
+                    } catch (OutputEventAdapterException disconnectEx) {
+                        log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
+                                .formatMessage(name), disconnectEx);
+                    }
                 }
             }
             throw new OutputEventAdapterException(EventAdapterConstants.ErrorMessage.SYNC_PUBLISH_FAILED.getCode(),
@@ -169,12 +171,15 @@ public class OutputAdapterRuntime {
     public void destroy() {
         try {
             outputEventAdapter.disconnect();
-            if (syncConnected) {
-                try {
-                    outputEventAdapter.disconnectSync();
-                } catch (OutputEventAdapterException e) {
-                    log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
-                            .formatMessage(name), e);
+            synchronized (this) {
+                if (syncConnected) {
+                    syncConnected = false;
+                    try {
+                        outputEventAdapter.disconnectSync();
+                    } catch (OutputEventAdapterException e) {
+                        log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
+                                .formatMessage(name), e);
+                    }
                 }
             }
         } finally {
