@@ -24,6 +24,7 @@
         <classes>
             <class name="org.wso2.carbon.event.output.adapter.http.HttpOutputAdaptorTestCase"/>
             <class name="org.wso2.carbon.event.output.adapter.http.HTTPEventAdapterTest"/>
+            <class name="org.wso2.carbon.event.output.adapter.http.SyncHttpClientManagerTest"/>
         </classes>
     </test>
 </suite>
