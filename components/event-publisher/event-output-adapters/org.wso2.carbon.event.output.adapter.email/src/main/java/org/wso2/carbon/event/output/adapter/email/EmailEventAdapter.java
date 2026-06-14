@@ -434,10 +434,10 @@ public class EmailEventAdapter implements OutputEventAdapter {
                 buildAndSendEmail(to, subject, body, type);
             } catch (MessagingException e) {
                 logMessagingException(e, to, 0);
-                EmailEventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), null,
+                EmailEventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), body,
                         "Error in message format", e, log, tenantId);
             } catch (Exception e) {
-                EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), null,
+                EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), body,
                         "Error sending email to '" + to + "'", e, log, tenantId);
             }
         }
