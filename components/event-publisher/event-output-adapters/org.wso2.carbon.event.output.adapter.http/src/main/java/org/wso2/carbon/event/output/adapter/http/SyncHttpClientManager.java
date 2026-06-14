@@ -37,7 +37,7 @@ class SyncHttpClientManager extends AbstractAPIClientManager {
 
     private final int retryCount;
 
-    SyncHttpClientManager(APIClientConfig config, int retryCount) {
+    public SyncHttpClientManager(APIClientConfig config, int retryCount) {
 
         super(config);
         this.retryCount = retryCount;
@@ -53,7 +53,7 @@ class SyncHttpClientManager extends AbstractAPIClientManager {
      * @return The API response containing status code and body.
      * @throws APIClientException If the request cannot be executed.
      */
-    APIResponse send(String url, APIRequestContext.HttpMethod httpMethod,
+    public APIResponse send(String url, APIRequestContext.HttpMethod httpMethod,
                      Map<String, String> headers, String payload) throws APIClientException {
 
         // The headers parameter already contains the resolved authentication headers. 

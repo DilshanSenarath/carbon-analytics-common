@@ -234,7 +234,16 @@ public class HttpOutputAdaptorTestCase {
         property.setOptions(null);
         property.setHint("Custom HTTP headers, e.g. \"header1: value1, header2: value2\"");
         propertyList.add(property);
-        Assert.assertEquals(4, dyPropertyList.size());
+        property = new Property("http.sync");
+        property.setRequired(false);
+        property.setSecured(false);
+        property.setEncrypted(false);
+        property.setDisplayName("HTTP Sync");
+        property.setDefaultValue(Boolean.FALSE.toString());
+        property.setOptions(new String[]{Boolean.TRUE.toString(), Boolean.FALSE.toString()});
+        property.setHint("Select whether to send HTTP requests synchronously");
+        propertyList.add(property);
+        Assert.assertEquals(5, dyPropertyList.size());
         int i = 0;
         for (Property prop : propertyList) {
             Assert.assertEquals(prop.getPropertyName(), dyPropertyList.get(i).getPropertyName());

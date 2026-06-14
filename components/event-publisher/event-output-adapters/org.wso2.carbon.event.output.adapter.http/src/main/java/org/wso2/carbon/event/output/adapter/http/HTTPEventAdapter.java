@@ -261,49 +261,45 @@ public class HTTPEventAdapter implements OutputEventAdapter {
         if (syncHttpClientManager != null) {
             return;
         }
-        synchronized (this) {
-            if (syncHttpClientManager != null) {
-                return;
-            }
-            try {
-                APIClientConfig.Builder configBuilder = new APIClientConfig.Builder()
-                        .httpConnectionTimeoutInMillis(getGlobalIntProperty(
-                                HTTPEventAdapterConstants.SYNC_CONNECTION_TIMEOUT,
-                                HTTPEventAdapterConstants.DEFAULT_SYNC_CONNECTION_TIMEOUT_MS))
-                        .httpReadTimeoutInMillis(getGlobalIntProperty(
-                                HTTPEventAdapterConstants.SYNC_READ_TIMEOUT,
-                                HTTPEventAdapterConstants.DEFAULT_SYNC_READ_TIMEOUT_MS))
-                        .httpConnectionRequestTimeoutInMillis(getGlobalIntProperty(
-                                HTTPEventAdapterConstants.SYNC_CONNECTION_REQUEST_TIMEOUT,
-                                HTTPEventAdapterConstants.DEFAULT_SYNC_CONNECTION_REQUEST_TIMEOUT_MS))
-                        .poolSizeToBeSet(getGlobalIntProperty(
-                                HTTPEventAdapterConstants.SYNC_POOL_SIZE,
-                                HTTPEventAdapterConstants.DEFAULT_SYNC_POOL_SIZE))
-                        .defaultMaxPerRoute(getGlobalIntProperty(
-                                HTTPEventAdapterConstants.SYNC_MAX_CONNECTIONS_PER_ROUTE,
-                                HTTPEventAdapterConstants.DEFAULT_SYNC_MAX_CONNECTIONS_PER_ROUTE))
-                        .responseLimitInBytes(getGlobalLongProperty(
-                                HTTPEventAdapterConstants.SYNC_RESPONSE_LIMIT_BYTES,
-                                HTTPEventAdapterConstants.DEFAULT_SYNC_RESPONSE_LIMIT_BYTES));
-                if (StringUtils.isNotBlank(proxyHost) && StringUtils.isNotBlank(proxyPort)) {
-                    try {
-                        configBuilder.proxyHost(proxyHost).proxyPort(Integer.parseInt(proxyPort));
-                    } catch (NumberFormatException e) {
-                        log.error(HTTPEventAdapterConstants.ErrorMessage.SYNC_INVALID_PROXY_PORT
-                                .formatMessage(proxyPort), e);
-                    }
+        
+        try {
+            APIClientConfig.Builder configBuilder = new APIClientConfig.Builder()
+                    .httpConnectionTimeoutInMillis(getGlobalIntProperty(
+                            HTTPEventAdapterConstants.SYNC_CONNECTION_TIMEOUT,
+                            HTTPEventAdapterConstants.DEFAULT_SYNC_CONNECTION_TIMEOUT_MS))
+                    .httpReadTimeoutInMillis(getGlobalIntProperty(
+                            HTTPEventAdapterConstants.SYNC_READ_TIMEOUT,
+                            HTTPEventAdapterConstants.DEFAULT_SYNC_READ_TIMEOUT_MS))
+                    .httpConnectionRequestTimeoutInMillis(getGlobalIntProperty(
+                            HTTPEventAdapterConstants.SYNC_CONNECTION_REQUEST_TIMEOUT,
+                            HTTPEventAdapterConstants.DEFAULT_SYNC_CONNECTION_REQUEST_TIMEOUT_MS))
+                    .poolSizeToBeSet(getGlobalIntProperty(
+                            HTTPEventAdapterConstants.SYNC_POOL_SIZE,
+                            HTTPEventAdapterConstants.DEFAULT_SYNC_POOL_SIZE))
+                    .defaultMaxPerRoute(getGlobalIntProperty(
+                            HTTPEventAdapterConstants.SYNC_MAX_CONNECTIONS_PER_ROUTE,
+                            HTTPEventAdapterConstants.DEFAULT_SYNC_MAX_CONNECTIONS_PER_ROUTE))
+                    .responseLimitInBytes(getGlobalLongProperty(
+                            HTTPEventAdapterConstants.SYNC_RESPONSE_LIMIT_BYTES,
+                            HTTPEventAdapterConstants.DEFAULT_SYNC_RESPONSE_LIMIT_BYTES));
+            if (StringUtils.isNotBlank(proxyHost) && StringUtils.isNotBlank(proxyPort)) {
+                try {
+                    configBuilder.proxyHost(proxyHost).proxyPort(Integer.parseInt(proxyPort));
+                } catch (NumberFormatException e) {
+                    log.error(HTTPEventAdapterConstants.ErrorMessage.SYNC_INVALID_PROXY_PORT
+                            .formatMessage(proxyPort), e);
                 }
-                int syncRetryCount = getGlobalIntProperty(
-                        HTTPEventAdapterConstants.SYNC_RETRY_COUNT,
-                        HTTPEventAdapterConstants.DEFAULT_SYNC_RETRY_COUNT);
-                syncHttpClientManager = new SyncHttpClientManager(configBuilder.build(), syncRetryCount);
-                initContentType();
-            } catch (APIClientException e) {
-                throw new OutputEventAdapterException(
-                        HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED.getCode(),
-                        HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED
-                                .formatMessage(eventAdapterConfiguration.getName()), e);
             }
+            int syncRetryCount = getGlobalIntProperty(
+                    HTTPEventAdapterConstants.SYNC_RETRY_COUNT,
+                    HTTPEventAdapterConstants.DEFAULT_SYNC_RETRY_COUNT);
+            syncHttpClientManager = new SyncHttpClientManager(configBuilder.build(), syncRetryCount);
+            initContentType();
+        } catch (APIClientException e) {
+            throw new OutputEventAdapterException(
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED.getCode(),
+                    HTTPEventAdapterConstants.ErrorMessage.SYNC_CLIENT_INIT_FAILED
+                            .formatMessage(eventAdapterConfiguration.getName()), e);
         }
     }
 
