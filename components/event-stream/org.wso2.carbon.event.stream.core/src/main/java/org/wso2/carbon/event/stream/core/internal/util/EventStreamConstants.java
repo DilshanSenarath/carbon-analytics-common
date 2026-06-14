@@ -95,17 +95,30 @@ public interface EventStreamConstants {
         private final String message;
 
         ErrorMessage(String code, String message) {
+
             this.code = code;
             this.message = message;
         }
 
-        public String getCode() { return code; }
+        public String getCode() {
 
-        public String getMessage() { return message; }
+            return code;
+        }
 
-        public String formatMessage(Object... args) { return String.format(message, args); }
+        public String getMessage() {
+
+            return message;
+        }
+
+        public String formatMessage(Object... args) {
+
+            return String.format(message, args);
+        }
 
         @Override
-        public String toString() { return code + " | " + message; }
+        public String toString() {
+            
+            return code + " | " + message;
+        }
     }
 }

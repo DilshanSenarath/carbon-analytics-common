@@ -471,7 +471,7 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
                         while (!eventQueue.isEmpty()) {
                             EventWrapper eventWrapper = eventQueue.poll();
                             if (eventWrapper.getTimestampInMillis() > lastProcessedTime) {
-                                process(eventWrapper.getEvent());
+                                processWithErrorPropagation(eventWrapper.getEvent());
                             }
                         }
                     }

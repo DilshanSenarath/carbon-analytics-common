@@ -194,7 +194,7 @@ public class EventJunction implements EventProducerCallback {
             for (SiddhiEventConsumer consumer : siddhiEventConsumers) {
                 try {
                     consumer.consumeEventWithErrorPropagation(convertedEvent);
-                } catch (EventStreamException e) {
+                } catch (Exception e) {
                     failures.add(new ConsumerFailureException(CONSUMER_TYPE_SIDDHI, streamDefinition.getStreamId(), e));
                 }
             }
@@ -204,7 +204,7 @@ public class EventJunction implements EventProducerCallback {
             for (WSO2EventConsumer consumer : wso2EventConsumers) {
                 try {
                     consumer.onEventWithErrorPropagation(event);
-                } catch (EventStreamException e) {
+                } catch (Exception e) {
                     failures.add(new ConsumerFailureException(CONSUMER_TYPE_WSO2, streamDefinition.getStreamId(), e));
                 }
             }
@@ -214,7 +214,7 @@ public class EventJunction implements EventProducerCallback {
             for (WSO2EventListConsumer consumer : wso2EventListConsumers) {
                 try {
                     consumer.onEventWithErrorPropagation(event);
-                } catch (EventStreamException e) {
+                } catch (Exception e) {
                     failures.add(new ConsumerFailureException(CONSUMER_TYPE_WSO2_LIST, streamDefinition.getStreamId(), e));
                 }
             }
