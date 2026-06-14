@@ -308,7 +308,16 @@ public class EmailOutputAdaptorTestCase {
         property.setOptions(new String[]{"text/plain", "text/html"});
         property.setHint("Select the email format to be sent");
         propertyList.add(property);
-        Assert.assertEquals(3, dyPropertyList.size());
+        property = new Property("email.sync");
+        property.setRequired(false);
+        property.setSecured(false);
+        property.setEncrypted(false);
+        property.setDisplayName("Email Sync");
+        property.setDefaultValue("false");
+        property.setOptions(new String[]{"true", "false"});
+        property.setHint("Select whether to send emails synchronously");
+        propertyList.add(property);
+        Assert.assertEquals(4, dyPropertyList.size());
         int i = 0;
         for (Property prop : propertyList) {
             Assert.assertEquals(prop.getPropertyName(), dyPropertyList.get(i).getPropertyName());
