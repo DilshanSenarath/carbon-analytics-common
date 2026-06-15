@@ -39,7 +39,7 @@ public interface SiddhiEventConsumer {
      * @param event The event object which will be an instance of {@link Event}.
      * @throws EventStreamException If the consumer signals a delivery failure.
      */
-    default void consumeEventWithErrorPropagation(Event event) throws EventStreamException {
+    default void consumeEventAndNotifyErrors(Event event) throws EventStreamException {
 
         consumeEvent(event);
     }

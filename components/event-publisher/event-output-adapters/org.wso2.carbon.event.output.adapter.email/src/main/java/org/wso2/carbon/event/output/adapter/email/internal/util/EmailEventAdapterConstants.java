@@ -98,11 +98,23 @@ public class EmailEventAdapterConstants {
 
         SYNC_EMAIL_SEND_FAILED(
                 "EMAIL-OA-65000",
-                "Failed to send email to '%s'."),
+                "Failed to send email to '%s' due to an SMTP/messaging error."),
 
         SYNC_EMAIL_MISSING_ADDRESS(
                 "EMAIL-OA-65001",
-                "Cannot send email synchronously: the email address dynamic property is not set.");
+                "Cannot send email synchronously: the email address dynamic property is not set."),
+
+        SYNC_EMAIL_ENCODING_FAILED(
+                "EMAIL-OA-65002",
+                "Failed to build email to '%s': unsupported character encoding in address or sender signature."),
+
+        SYNC_EMAIL_AUTH_FAILED(
+                "EMAIL-OA-65003",
+                "Failed to send email to '%s': SMTP authentication failed."),
+
+        SYNC_EMAIL_SEND_REJECTED(
+                "EMAIL-OA-65004",
+                "Failed to send email to '%s': message rejected by the server (check recipient address validity).");
 
         private final String code;
         private final String message;

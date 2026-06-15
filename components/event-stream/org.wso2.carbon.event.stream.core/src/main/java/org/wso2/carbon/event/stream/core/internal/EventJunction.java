@@ -185,7 +185,7 @@ public class EventJunction implements EventProducerCallback {
     }
 
     @Override
-    public void sendEventWithErrorPropagation(Event event) throws EventStreamException {
+    public void sendEventAndNotifyErrors(Event event) throws EventStreamException {
 
         List<ConsumerFailureException> failures = new ArrayList<>();
 
@@ -193,7 +193,7 @@ public class EventJunction implements EventProducerCallback {
             org.wso2.siddhi.core.event.Event convertedEvent = EventConverter.convertToEvent(event, metaFlag, correlationFlag, payloadFlag, attributesCount);
             for (SiddhiEventConsumer consumer : siddhiEventConsumers) {
                 try {
-                    consumer.consumeEventWithErrorPropagation(convertedEvent);
+                    consumer.consumeEventAndNotifyErrors(convertedEvent);
                 } catch (Exception e) {
                     failures.add(new ConsumerFailureException(CONSUMER_TYPE_SIDDHI, streamDefinition.getStreamId(), e));
                 }
@@ -203,7 +203,7 @@ public class EventJunction implements EventProducerCallback {
         if (!wso2EventConsumers.isEmpty()) {
             for (WSO2EventConsumer consumer : wso2EventConsumers) {
                 try {
-                    consumer.onEventWithErrorPropagation(event);
+                    consumer.onEventAndNotifyErrors(event);
                 } catch (Exception e) {
                     failures.add(new ConsumerFailureException(CONSUMER_TYPE_WSO2, streamDefinition.getStreamId(), e));
                 }
@@ -213,7 +213,7 @@ public class EventJunction implements EventProducerCallback {
         if (!wso2EventListConsumers.isEmpty()) {
             for (WSO2EventListConsumer consumer : wso2EventListConsumers) {
                 try {
-                    consumer.onEventWithErrorPropagation(event);
+                    consumer.onEventAndNotifyErrors(event);
                 } catch (Exception e) {
                     failures.add(new ConsumerFailureException(CONSUMER_TYPE_WSO2_LIST, streamDefinition.getStreamId(), e));
                 }

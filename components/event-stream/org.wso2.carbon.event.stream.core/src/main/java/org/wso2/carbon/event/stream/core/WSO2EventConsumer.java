@@ -40,7 +40,7 @@ public interface WSO2EventConsumer {
      * @param event The event object which will be an instance of {@link Event}.
      * @throws EventStreamException If the consumer signals a failure.
      */
-    default void onEventWithErrorPropagation(Event event) throws EventStreamException {
+    default void onEventAndNotifyErrors(Event event) throws EventStreamException {
 
         onEvent(event);
     }

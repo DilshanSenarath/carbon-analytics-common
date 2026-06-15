@@ -223,12 +223,25 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
     public void sendEvent(Event event) {
 
+        try {
+            dispatch(event, false);
+        } catch (EventStreamException e) {
+            // process() does not throw EventStreamException; this catch is unreachable.
+        }
+    }
+
+    private void dispatch(Event event, boolean notifyError) throws EventStreamException {
+        
         if (isPolled) {
             if (sendToOther) {
                 EventPublisherServiceValueHolder.getEventManagementService()
                         .syncEvent(syncId, Manager.ManagerType.Publisher, event);
             }
-            process(event);
+            if (notifyError) {
+                processAndNotifyErrors(event);
+            } else {
+                process(event);
+            }
         } else {
             if (!EventPublisherServiceValueHolder.getCarbonEventPublisherManagementService().isDrop()) {
                 if (mode == Mode.HA) {
@@ -240,14 +253,22 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
                         while (!eventQueue.isEmpty()) {
                             EventWrapper eventWrapper = eventQueue.poll();
                             if (eventWrapper.getTimestampInMillis() > lastProcessedTime) {
-                                process(eventWrapper.getEvent());
+                                if (notifyError) {
+                                    processAndNotifyErrors(eventWrapper.getEvent());
+                                } else {
+                                    process(eventWrapper.getEvent());
+                                }
                             }
                         }
                     }
                     EventPublisherServiceValueHolder.getEventManagementService().updateLatestEventSentTime(
                             eventPublisherConfiguration.getEventPublisherName(), tenantId, currentTime);
                 }
-                process(event);
+                if (notifyError) {
+                    processAndNotifyErrors(event);
+                } else {
+                    process(event);
+                }
             } else {
                 if (mode == Mode.HA) {
                     // Add to Queue.
@@ -448,62 +469,17 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
     }
 
     @Override
-    public void onEventWithErrorPropagation(Event event) throws EventStreamException {
+    public void onEventAndNotifyErrors(Event event) throws EventStreamException {
 
-        sendEventWithErrorPropagation(event);
+        sendEventAndNotifyErrors(event);
     }
 
-    private void sendEventWithErrorPropagation(Event event) throws EventStreamException {
+    private void sendEventAndNotifyErrors(Event event) throws EventStreamException {
 
-        if (isPolled) {
-            if (sendToOther) {
-                EventPublisherServiceValueHolder.getEventManagementService()
-                        .syncEvent(syncId, Manager.ManagerType.Publisher, event);
-            }
-            processWithErrorPropagation(event);
-        } else {
-            if (!EventPublisherServiceValueHolder.getCarbonEventPublisherManagementService().isDrop()) {
-                if (mode == Mode.HA) {
-                    long currentTime = EventPublisherServiceValueHolder.getEventManagementService().getClusterTimeInMillis();
-                    if (!eventQueue.isEmpty()) {
-                        long lastProcessedTime = EventPublisherServiceValueHolder.getEventManagementService()
-                                .getLatestEventSentTime(eventPublisherConfiguration.getEventPublisherName(), tenantId);
-                        while (!eventQueue.isEmpty()) {
-                            EventWrapper eventWrapper = eventQueue.poll();
-                            if (eventWrapper.getTimestampInMillis() > lastProcessedTime) {
-                                processWithErrorPropagation(eventWrapper.getEvent());
-                            }
-                        }
-                    }
-                    EventPublisherServiceValueHolder.getEventManagementService().updateLatestEventSentTime(
-                            eventPublisherConfiguration.getEventPublisherName(), tenantId, currentTime);
-                }
-                processWithErrorPropagation(event);
-            } else {
-                if (mode == Mode.HA) {
-                    long currentTime = EventPublisherServiceValueHolder.getEventManagementService().getClusterTimeInMillis();
-                    EventWrapper eventWrapper = new EventWrapper(event, currentTime);
-                    while (!eventQueue.offer(eventWrapper)) {
-                        EventWrapper wrapper = eventQueue.poll();
-                        if (log.isDebugEnabled()) {
-                            log.debug("Dropping event arrived at " + wrapper.getTimestampInMillis() +
-                                    " due to insufficient capacity at Event Publisher Queue, dropped event: " +
-                                    wrapper.getEvent());
-                        }
-                    }
-                    long lastProcessedTime = EventPublisherServiceValueHolder.getEventManagementService()
-                            .getLatestEventSentTime(eventPublisherConfiguration.getEventPublisherName(), tenantId);
-                    synchronized (this) {
-                        while (!eventQueue.isEmpty() && eventQueue.peek().getTimestampInMillis() <= lastProcessedTime) {
-                            eventQueue.remove();
-                        }
-                    }
-                }
-            }
-        }
+        dispatch(event, true);
     }
 
-    private void processWithErrorPropagation(Event event) throws EventStreamException {
+    private void processAndNotifyErrors(Event event) throws EventStreamException {
 
         Map<String, String> dynamicProperties = new HashMap<String, String>(
                 eventPublisherConfiguration.getToAdapterDynamicProperties());
@@ -514,7 +490,7 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
         } catch (EventPublisherConfigurationException e) {
             throw new EventStreamException(EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED.getCode(),
                     EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED
-                            .formatMessage(eventPublisherConfiguration.getEventPublisherName(), e.getMessage()), e);
+                            .formatMessage(eventPublisherConfiguration.getEventPublisherName()), e);
         }
 
         if (outObject == null) {
@@ -528,11 +504,8 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
             try {
                 eventAdapterService.publishSync(publisherName, dynamicProperties, outObject);
             } catch (OutputEventAdapterException e) {
-                String errorCode = e.getErrorCode() != null
-                        ? e.getErrorCode()
-                        : EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.getCode();
-                throw new EventStreamException(errorCode,
-                        EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.formatMessage(publisherName), e);
+                throw new EventStreamException(EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.getCode(), 
+                    EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.formatMessage(publisherName), e);
             }
         } else {
             eventAdapterService.publish(publisherName, dynamicProperties, outObject);

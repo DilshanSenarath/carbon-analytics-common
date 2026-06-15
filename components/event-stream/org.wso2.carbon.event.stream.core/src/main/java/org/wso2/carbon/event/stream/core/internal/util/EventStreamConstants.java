@@ -73,22 +73,22 @@ public interface EventStreamConstants {
 
         CONSUMER_FAILURE(
                 "ES-65000",
-                "Consumer '%s' on stream '%s' failed: %s"),
-
-        EVENT_DISPATCH_NO_FAILURES(
-                "ES-65001",
-                "Event dispatch failed with no recorded failures."),
+                "Consumer '%s' on stream '%s' failed."),
 
         MULTIPLE_CONSUMERS_FAILED(
                 "ES-65002",
-                "%d consumer(s) failed to process event: %s"),
+                "%d consumer(s) failed to process the event."),
 
         PRODUCER_PROPAGATION_NOT_IMPLEMENTED(
                 "ES-65003",
-                "sendEventWithErrorPropagation is not implemented for this producer."),
+                "sendEventAndNotifyErrors is not implemented for this producer."),
+
+        SERVICE_PUBLISH_NOT_IMPLEMENTED(
+                "ES-65004",
+                "publishAndNotifyErrors is not implemented for this service."),
 
         NO_JUNCTION_FOR_STREAM(
-                "ES-65004",
+                "ES-65005",
                 "No junction found for stream '%s' on tenant %d; cannot deliver event.");
 
         private final String code;

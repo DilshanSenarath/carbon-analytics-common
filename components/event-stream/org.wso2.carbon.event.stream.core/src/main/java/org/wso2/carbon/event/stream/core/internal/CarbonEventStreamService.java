@@ -365,9 +365,9 @@ public class CarbonEventStreamService implements EventStreamService {
     }
 
     @Override
-    public void publishWithErrorPropagation(Event event) throws EventStreamException {
+    public void publishAndNotifyErrors(Event event) throws EventStreamException {
 
-        EventStreamServiceValueHolder.getEventStreamRuntime().publishWithErrorPropagation(event.getStreamId(), event);
+        EventStreamServiceValueHolder.getEventStreamRuntime().publishAndNotifyErrors(event.getStreamId(), event);
     }
 
     public boolean isEventStreamFileExists(String eventStreamFileName) {

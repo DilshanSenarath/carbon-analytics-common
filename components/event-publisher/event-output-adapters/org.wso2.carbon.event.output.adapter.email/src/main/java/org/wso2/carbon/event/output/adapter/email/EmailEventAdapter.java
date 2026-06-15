@@ -381,7 +381,19 @@ public class EmailEventAdapter implements OutputEventAdapter {
             }
             try {
                 buildAndSendEmail(email, subject, message.toString(), emailType);
-            } catch (MessagingException | UnsupportedEncodingException e) {
+            } catch (UnsupportedEncodingException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_ENCODING_FAILED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_ENCODING_FAILED.formatMessage(email), e);
+            } catch (AuthenticationFailedException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_AUTH_FAILED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_AUTH_FAILED.formatMessage(email), e);
+            } catch (SendFailedException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_REJECTED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_REJECTED.formatMessage(email), e);
+            } catch (MessagingException e) {
                 throw new OutputEventAdapterException(
                         EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.getCode(),
                         EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.formatMessage(email), e);

@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Exception aggregating failures from one or more stream consumers during event dispatch.
+ * Exception aggregating failures from multiple stream consumers during event dispatch.
  */
 public class AggregatedConsumerFailureException extends EventStreamException {
 
@@ -32,31 +32,13 @@ public class AggregatedConsumerFailureException extends EventStreamException {
 
     public AggregatedConsumerFailureException(List<ConsumerFailureException> failures) {
 
-        super(failures.isEmpty()
-                ? EventStreamConstants.ErrorMessage.EVENT_DISPATCH_NO_FAILURES.getCode()
-                : EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED.getCode(),
-                buildMessage(failures));
+        super(EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED.getCode(),
+                EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED.formatMessage(failures.size()));
         this.failures = Collections.unmodifiableList(failures);
     }
 
     public List<ConsumerFailureException> getFailures() {
 
         return failures;
-    }
-
-    private static String buildMessage(List<ConsumerFailureException> failures) {
-
-        if (failures.isEmpty()) {
-            return EventStreamConstants.ErrorMessage.EVENT_DISPATCH_NO_FAILURES.getMessage();
-        }
-        StringBuilder failureList = new StringBuilder();
-        for (int i = 0; i < failures.size(); i++) {
-            if (i > 0) {
-                failureList.append("; ");
-            }
-            failureList.append('[').append(failures.get(i)).append(']');
-        }
-        return EventStreamConstants.ErrorMessage.MULTIPLE_CONSUMERS_FAILED
-                .formatMessage(failures.size(), failureList.toString());
     }
 }

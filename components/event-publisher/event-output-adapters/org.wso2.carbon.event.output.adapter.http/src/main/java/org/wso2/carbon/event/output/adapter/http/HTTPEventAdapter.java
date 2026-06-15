@@ -104,7 +104,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
     private HostConfiguration hostConfiguration = null;
     private String internalAccessToken = null;
     private final String provider;
-    private volatile SyncHttpClientManager syncHttpClientManager = null;
+    private SyncHttpClientManager syncHttpClientManager = null;
 
     public HTTPEventAdapter(OutputEventAdapterConfiguration eventAdapterConfiguration,
             Map<String, String> globalProperties) {
@@ -484,8 +484,8 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                         this.internalAccessToken = new String(decryptCredential(provider, CLIENT_CREDENTIAL,
                                 INTERNAL_ACCESS_TOKEN));
                     } catch (SecretManagementException e) {
-                            // Ignore the exception and generate a new access token as the internal access token is not
-                            // available in the secret store manager.
+                        // Ignore the exception and generate a new access token as the internal access token is not
+                        // available in the secret store manager.
                     }
 
                     if (StringUtils.isBlank(internalAccessToken)) {
@@ -493,8 +493,8 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                             log.debug("Internal access token for client credential grant type authentication is " +
                                     "not available in the secret manager.");
                         }
-                            // Either clientId and clientSecret are both encrypted or both are in plain text.
-                            // Hence, failing to decrypt clientId or clientSecret means they are in plain text.
+                        // Either clientId and clientSecret are both encrypted or both are in plain text.
+                        // Hence, failing to decrypt clientId or clientSecret means they are in plain text.
                         char[] clientId;
                         char[] clientSecret;
                         try {
@@ -743,7 +743,7 @@ public class HTTPEventAdapter implements OutputEventAdapter {
                     DiagnosticLog.ResultStatus.SUCCESS);
             return newToken;
         } catch (OutputEventAdapterRuntimeException e) {
-            logEventPublishingFailure("Failed to obtain a new access token for HTTP-based publishing.", e);
+            logEventPublishingFailure("Failed to obtain a new access token for HTTP-based sync publishing.", e);
             throw new OutputEventAdapterException(
                     HTTPEventAdapterConstants.ErrorMessage.SYNC_TOKEN_FETCH_FAILED.getCode(),
                     HTTPEventAdapterConstants.ErrorMessage.SYNC_TOKEN_FETCH_FAILED

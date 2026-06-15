@@ -135,7 +135,7 @@ public final class EventPublisherConstants {
 
         EVENT_MAPPING_FAILED(
                 "EP-65000",
-                "Cannot map event from publisher '%s': %s"),
+                "Cannot map event from publisher '%s'."),
 
         SYNC_DELIVERY_FAILED(
                 "EP-65001",

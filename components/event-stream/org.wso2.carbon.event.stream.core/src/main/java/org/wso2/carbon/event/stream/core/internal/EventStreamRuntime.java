@@ -94,12 +94,7 @@ public class EventStreamRuntime {
     }
 
     public void publish(String streamId, Event event) {
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-        if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
-            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(true);
-            TenantAxisUtils.getTenantConfigurationContext(tenantDomain, EventStreamServiceValueHolder.
-                    getConfigurationContextService().getServerConfigContext());
-        }
+        int tenantId = initTenantContext();
 
         Map<String, EventJunction> eventJunctionMap = tenantSpecificEventJunctions.get(tenantId);
         if (eventJunctionMap != null && eventJunctionMap.containsKey(streamId)) {
@@ -118,21 +113,27 @@ public class EventStreamRuntime {
      * @param event    Event to publish.
      * @throws EventStreamException If no junction exists for the stream or a consumer fails.
      */
-    public void publishWithErrorPropagation(String streamId, Event event) throws EventStreamException {
+    public void publishAndNotifyErrors(String streamId, Event event) throws EventStreamException {
 
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-        if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
-            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(true);
-            TenantAxisUtils.getTenantConfigurationContext(tenantDomain, EventStreamServiceValueHolder.
-                    getConfigurationContextService().getServerConfigContext());
-        }
+        int tenantId = initTenantContext();
 
         Map<String, EventJunction> eventJunctionMap = tenantSpecificEventJunctions.get(tenantId);
         if (eventJunctionMap == null || !eventJunctionMap.containsKey(streamId)) {
             throw new EventStreamException(EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM.getCode(),
                     EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM.formatMessage(streamId, tenantId));
         }
-        eventJunctionMap.get(streamId).sendEventWithErrorPropagation(event);
+        eventJunctionMap.get(streamId).sendEventAndNotifyErrors(event);
+    }
+
+    private int initTenantContext() {
+        
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(true);
+            TenantAxisUtils.getTenantConfigurationContext(tenantDomain, EventStreamServiceValueHolder.
+                    getConfigurationContextService().getServerConfigContext());
+        }
+        return tenantId;
     }
 
     public void subscribe(SiddhiEventConsumer siddhiEventConsumer) throws EventStreamConfigurationException {

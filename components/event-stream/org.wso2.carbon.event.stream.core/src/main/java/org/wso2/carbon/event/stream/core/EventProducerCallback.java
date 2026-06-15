@@ -39,7 +39,7 @@ public interface EventProducerCallback {
      * @param event The event to dispatch.
      * @throws EventStreamException If one or more consumers fail to process the event.
      */
-    default void sendEventWithErrorPropagation(Event event) throws EventStreamException {
+    default void sendEventAndNotifyErrors(Event event) throws EventStreamException {
 
         throw new EventStreamException(
                 EventStreamConstants.ErrorMessage.PRODUCER_PROPAGATION_NOT_IMPLEMENTED.getCode(),
