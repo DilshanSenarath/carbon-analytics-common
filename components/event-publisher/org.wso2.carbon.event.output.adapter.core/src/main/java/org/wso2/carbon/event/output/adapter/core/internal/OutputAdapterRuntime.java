@@ -171,11 +171,13 @@ public class OutputAdapterRuntime {
     public void destroy() {
         try {
             outputEventAdapter.disconnect();
-            try {
-                outputEventAdapter.disconnectSync();
-            } catch (OutputEventAdapterException e) {
-                log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
-                        .formatMessage(name), e);
+            if (syncConnected) {
+                try {
+                    outputEventAdapter.disconnectSync();
+                } catch (OutputEventAdapterException e) {
+                    log.error(EventAdapterConstants.ErrorMessage.SYNC_PATH_DISCONNECT_FAILED
+                            .formatMessage(name), e);
+                }
             }
         } finally {
             outputEventAdapter.destroy();
