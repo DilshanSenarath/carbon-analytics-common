@@ -167,18 +167,29 @@ public class OutputAdapterRuntimeTest {
     // --- destroy ---
 
     @Test
-    public void testDestroyCallsDisconnectAndDestroyOnAdapter() throws Exception {
+    public void testDestroySkipsDisconnectSyncWhenNotSyncConnected() throws Exception {
 
         runtime.destroy();
 
         verify(mockAdapter, times(1)).disconnect();
         verify(mockAdapter, times(1)).destroy();
+        verify(mockAdapter, never()).disconnectSync();
+    }
+
+    @Test
+    public void testDestroyCallsDisconnectSyncWhenSyncConnected() throws Exception {
+
+        runtime.publishSync("msg", DYNAMIC_PROPS);
+        runtime.destroy();
+
         verify(mockAdapter, times(1)).disconnectSync();
+        verify(mockAdapter, times(1)).destroy();
     }
 
     @Test
     public void testDestroyCallsAdapterDestroyEvenWhenDisconnectSyncThrows() throws Exception {
 
+        runtime.publishSync("msg", DYNAMIC_PROPS);
         doThrow(new OutputEventAdapterException("disconnect sync failed"))
                 .when(mockAdapter).disconnectSync();
 
