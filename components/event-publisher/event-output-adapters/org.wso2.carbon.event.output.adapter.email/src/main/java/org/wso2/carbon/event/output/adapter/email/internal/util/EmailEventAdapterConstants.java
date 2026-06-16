@@ -1,20 +1,21 @@
 /*
-*  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.event.output.adapter.email.internal.util;
 
 public class EmailEventAdapterConstants {
@@ -27,6 +28,8 @@ public class EmailEventAdapterConstants {
     public static final String ADAPTER_MESSAGE_EMAIL_ADDRESS = "email.address";
     public static final String ADAPTER_MESSAGE_EMAIL_ADDRESS_HINT = "emailAddress.hint";
     public static final String ADAPTER_MESSAGE_EMAIL_SUBJECT = "email.subject";
+    public static final String ADAPTER_MESSAGE_EMAIL_SYNC = "email.sync";
+    public static final String ADAPTER_MESSAGE_EMAIL_SYNC_HINT = "emailSync.hint";
     public static final String APAPTER_MESSAGE_EMAIL_TYPE = "email.type";
     public static final String ADAPTER_MESSAGE_EMAIL_TYPE_HINT = "emailType.hint";
     public static final String ADAPTER_EMAIL_SMTP_PORT = "mail.smtp.port";
@@ -88,5 +91,59 @@ public class EmailEventAdapterConstants {
     public static final String MAIL_SMTP_REPLY_TO = "mail.smtp.replyTo";
     public static final String MAIL_SMTP_SIGNATURE = "mail.smtp.signature";
 
+    /**
+     * Error messages for the email adapter sync publish path.
+     */
+    public enum ErrorMessage {
 
+        SYNC_EMAIL_SEND_FAILED(
+                "EMAIL-OA-65000",
+                "Failed to send email to '%s' due to an SMTP/messaging error."),
+
+        SYNC_EMAIL_MISSING_ADDRESS(
+                "EMAIL-OA-65001",
+                "Cannot send email synchronously: the email address dynamic property is not set."),
+
+        SYNC_EMAIL_ENCODING_FAILED(
+                "EMAIL-OA-65002",
+                "Failed to build email to '%s': unsupported character encoding in address or sender signature."),
+
+        SYNC_EMAIL_AUTH_FAILED(
+                "EMAIL-OA-65003",
+                "Failed to send email to '%s': SMTP authentication failed."),
+
+        SYNC_EMAIL_SEND_REJECTED(
+                "EMAIL-OA-65004",
+                "Failed to send email to '%s': message rejected by the server (check recipient address validity).");
+
+        private final String code;
+        private final String message;
+
+        ErrorMessage(String code, String message) {
+
+            this.code = code;
+            this.message = message;
+        }
+
+        public String getCode() {
+
+            return code;
+        }
+
+        public String getMessage() {
+
+            return message;
+        }
+
+        public String formatMessage(Object... args) {
+
+            return String.format(message, args);
+        }
+
+        @Override
+        public String toString() {
+            
+            return code + " | " + message;
+        }
+    }
 }

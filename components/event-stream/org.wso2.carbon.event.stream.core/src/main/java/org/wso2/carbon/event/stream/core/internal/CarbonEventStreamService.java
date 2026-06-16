@@ -36,9 +36,9 @@ import org.wso2.carbon.event.stream.core.SiddhiEventConsumer;
 import org.wso2.carbon.event.stream.core.WSO2EventConsumer;
 import org.wso2.carbon.event.stream.core.WSO2EventListConsumer;
 import org.wso2.carbon.event.stream.core.exception.EventStreamConfigurationException;
+import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 import org.wso2.carbon.event.stream.core.exception.StreamDefinitionAlreadyDefinedException;
 import org.wso2.carbon.event.stream.core.internal.ds.EventStreamServiceValueHolder;
-import org.wso2.carbon.event.stream.core.internal.util.CarbonEventStreamUtil;
 import org.wso2.carbon.event.stream.core.internal.util.EventStreamConstants;
 import org.wso2.carbon.event.stream.core.internal.util.SampleEventGenerator;
 import org.wso2.carbon.event.stream.core.internal.util.helper.EventStreamConfigurationFileSystemInvoker;
@@ -364,6 +364,11 @@ public class CarbonEventStreamService implements EventStreamService {
         EventStreamServiceValueHolder.getEventStreamRuntime().publish(event.getStreamId(), event);
     }
 
+    @Override
+    public void publishAndNotifyErrors(Event event) throws EventStreamException {
+
+        EventStreamServiceValueHolder.getEventStreamRuntime().publishAndNotifyErrors(event.getStreamId(), event);
+    }
 
     public boolean isEventStreamFileExists(String eventStreamFileName) {
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();

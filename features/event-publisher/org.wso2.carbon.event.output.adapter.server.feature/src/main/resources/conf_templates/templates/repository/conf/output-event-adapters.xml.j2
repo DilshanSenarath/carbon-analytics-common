@@ -63,6 +63,14 @@
         <property key="maxTotalConnections">1000</property>
         <!-- Property to enable x-www-form-urlencoded payloads -->
         <property key="enableFormUrlEncoded">{{output_adapter.http.enable_form_url_encoded}}</property>
+        <!-- Sync HTTP Client Related Properties -->
+        <property key="syncConnectionTimeout">{{output_adapter.http.sync_connection_timeout}}</property>
+        <property key="syncReadTimeout">{{output_adapter.http.sync_read_timeout}}</property>
+        <property key="syncConnectionRequestTimeout">{{output_adapter.http.sync_connection_request_timeout}}</property>
+        <property key="syncPoolSize">{{output_adapter.http.sync_pool_size}}</property>
+        <property key="syncMaxConnectionsPerRoute">{{output_adapter.http.sync_max_connections_per_route}}</property>
+        <property key="syncResponseLimitBytes">{{output_adapter.http.sync_response_limit_bytes}}</property>
+        <property key="syncRetryCount">{{output_adapter.http.sync_retry_count}}</property>
     </adapterConfig>
 
     <adapterConfig type="jms">

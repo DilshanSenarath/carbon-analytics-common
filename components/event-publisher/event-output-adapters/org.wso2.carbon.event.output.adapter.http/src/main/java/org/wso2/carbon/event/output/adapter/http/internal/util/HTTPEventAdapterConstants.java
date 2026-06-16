@@ -1,20 +1,21 @@
 /*
-*  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.event.output.adapter.http.internal.util;
 
 public class HTTPEventAdapterConstants {
@@ -117,4 +118,112 @@ public class HTTPEventAdapterConstants {
 
     // Default value.
     public static final String DEFAULT_SECRET_PROVIDER = EMAIL_PROVIDER;
+
+    // Sync HTTP client connection pool configuration (read from global properties).
+    public static final String SYNC_CONNECTION_TIMEOUT = "syncConnectionTimeout";
+    public static final int DEFAULT_SYNC_CONNECTION_TIMEOUT_MS = 1000;
+    public static final String SYNC_READ_TIMEOUT = "syncReadTimeout";
+    public static final int DEFAULT_SYNC_READ_TIMEOUT_MS = 1000;
+    public static final String SYNC_CONNECTION_REQUEST_TIMEOUT = "syncConnectionRequestTimeout";
+    public static final int DEFAULT_SYNC_CONNECTION_REQUEST_TIMEOUT_MS = 1000;
+    public static final String SYNC_POOL_SIZE = "syncPoolSize";
+    public static final int DEFAULT_SYNC_POOL_SIZE = 20;
+    public static final String SYNC_MAX_CONNECTIONS_PER_ROUTE = "syncMaxConnectionsPerRoute";
+    public static final int DEFAULT_SYNC_MAX_CONNECTIONS_PER_ROUTE = 2;
+    public static final String SYNC_RESPONSE_LIMIT_BYTES = "syncResponseLimitBytes";
+    public static final long DEFAULT_SYNC_RESPONSE_LIMIT_BYTES = 1048576L;
+    public static final String SYNC_RETRY_COUNT = "syncRetryCount";
+    public static final int DEFAULT_SYNC_RETRY_COUNT = 0;
+
+    // Dynamic property to request synchronous delivery.
+    public static final String ADAPTER_MESSAGE_HTTP_SYNC = "http.sync";
+    public static final String ADAPTER_MESSAGE_HTTP_SYNC_HINT = "http.sync.hint";
+
+    /**
+     * Error messages for the HTTP adapter sync publish path.
+     */
+    public enum ErrorMessage {
+
+        SYNC_CLIENT_INIT_FAILED(
+                "HTTP-OA-65000",
+                "Adapter '%s' could not be configured for synchronous publishing. Check the adapter settings and try again."),
+
+        SYNC_CLIENT_NOT_INITIALIZED(
+                "HTTP-OA-65001",
+                "Adapter '%s' is not ready; the connection has not been established. Ensure the adapter initialised successfully."),
+
+        SYNC_PUBLISH_FAILED_WITH_RESPONSE(
+                "HTTP-OA-65002",
+                "Publishing to '%s' failed. Received HTTP %d. Server response: %s"),
+
+        SYNC_PUBLISH_UNAUTHORIZED(
+                "HTTP-OA-65003",
+                "Publishing to '%s' failed with HTTP 401 (Unauthorized). Verify that the configured credentials or access token are correct and have not expired."),
+
+        SYNC_PUBLISH_FORBIDDEN(
+                "HTTP-OA-65004",
+                "Publishing to '%s' failed with HTTP 403 (Forbidden). The configured account does not have permission to publish to this endpoint."),
+
+        SYNC_PUBLISH_BAD_REQUEST(
+                "HTTP-OA-65005",
+                "Publishing to '%s' failed with HTTP 400 (Bad Request). Check the event format and required fields. Server response: %s"),
+
+        SYNC_PUBLISH_TOO_MANY_REQUESTS(
+                "HTTP-OA-65006",
+                "Publishing to '%s' failed with HTTP 429 (Too Many Requests). Reduce the publishing rate or wait before retrying."),
+
+        SYNC_PUBLISH_SERVICE_UNAVAILABLE(
+                "HTTP-OA-65007",
+                "Publishing to '%s' failed with HTTP %d. The server is temporarily unavailable. Wait a moment and retry."),
+
+        SYNC_PUBLISH_SERVER_ERROR(
+                "HTTP-OA-65008",
+                "Publishing to '%s' failed with HTTP 500. The server could not process the request. Server response: %s"),
+
+        SYNC_PUBLISH_FAILED_IO(
+                "HTTP-OA-65009",
+                "Publishing to '%s' failed. The connection to the server was interrupted or timed out. Check network connectivity and that the endpoint is reachable."),
+
+        SYNC_TOKEN_REFRESH_MISSING_CREDS(
+                "HTTP-OA-65010",
+                "Adapter '%s' could not obtain a new access token because the client ID or client secret is missing. Verify the adapter credentials."),
+
+        SYNC_TOKEN_FETCH_FAILED(
+                "HTTP-OA-65011",
+                "Adapter '%s' could not obtain a new access token. The token endpoint may be unavailable or the credentials may be incorrect."),
+
+        SYNC_INVALID_PROXY_PORT(
+                "HTTP-OA-65012",
+                "Proxy port '%s' is not valid. The proxy configuration will be ignored for this adapter.");
+
+        private final String code;
+        private final String message;
+
+        ErrorMessage(String code, String message) {
+
+            this.code = code;
+            this.message = message;
+        }
+
+        public String getCode() { 
+
+                return code;
+        }
+
+        public String getMessage() {
+
+                return message;
+        }
+
+        public String formatMessage(Object... args) {
+
+                return String.format(message, args);
+        }
+
+        @Override
+        public String toString() {
+                
+                return code + " | " + message;
+        }
+    }
 }

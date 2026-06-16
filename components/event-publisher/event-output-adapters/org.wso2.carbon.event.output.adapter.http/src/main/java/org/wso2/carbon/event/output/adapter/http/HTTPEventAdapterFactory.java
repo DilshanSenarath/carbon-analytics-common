@@ -1,20 +1,21 @@
 /*
-*  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.event.output.adapter.http;
 
 import org.wso2.carbon.event.output.adapter.core.*;
@@ -155,10 +156,19 @@ public class HTTPEventAdapterFactory extends OutputEventAdapterFactory {
         headersProp.setHint(resourceBundle.getString(HTTPEventAdapterConstants.ADAPTER_HEADERS_HINT));
         headersProp.setRequired(false);
 
+        Property syncProp = new Property(HTTPEventAdapterConstants.ADAPTER_MESSAGE_HTTP_SYNC);
+        syncProp.setDisplayName(resourceBundle.getString(HTTPEventAdapterConstants.ADAPTER_MESSAGE_HTTP_SYNC));
+        syncProp.setRequired(false);
+        syncProp.setOptions(new String[]{Boolean.TRUE.toString(), Boolean.FALSE.toString()});
+        syncProp.setDefaultValue(Boolean.FALSE.toString());
+        syncProp.setHint(resourceBundle.getString(HTTPEventAdapterConstants.ADAPTER_MESSAGE_HTTP_SYNC_HINT));
+        syncProp.setImplicit(true);
+
         dynamicPropertyList.add(urlProp);
         dynamicPropertyList.add(usernameProp);
         dynamicPropertyList.add(passwordProp);
         dynamicPropertyList.add(headersProp);
+        dynamicPropertyList.add(syncProp);
 
         return dynamicPropertyList;
     }

@@ -1,16 +1,19 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed
- * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.wso2.carbon.event.stream.core.internal;
@@ -25,7 +28,9 @@ import org.wso2.carbon.databridge.commons.StreamDefinition;
 import org.wso2.carbon.databridge.commons.utils.DataBridgeCommonsUtils;
 import org.wso2.carbon.event.stream.core.*;
 import org.wso2.carbon.event.stream.core.exception.EventStreamConfigurationException;
+import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 import org.wso2.carbon.event.stream.core.internal.ds.EventStreamServiceValueHolder;
+import org.wso2.carbon.event.stream.core.internal.util.EventStreamConstants;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -89,12 +94,7 @@ public class EventStreamRuntime {
     }
 
     public void publish(String streamId, Event event) {
-        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
-        if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
-            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(true);
-            TenantAxisUtils.getTenantConfigurationContext(tenantDomain, EventStreamServiceValueHolder.
-                    getConfigurationContextService().getServerConfigContext());
-        }
+        int tenantId = initTenantContext();
 
         Map<String, EventJunction> eventJunctionMap = tenantSpecificEventJunctions.get(tenantId);
         if (eventJunctionMap != null && eventJunctionMap.containsKey(streamId)) {
@@ -103,6 +103,37 @@ public class EventStreamRuntime {
         } else {
             log.debug("Event " + event.toString() + " dropped since no junction found for the streamId " + streamId);
         }
+    }
+
+    /**
+     * Dispatches the event to the matching junction while propagating any consumer-side failure
+     * back to the caller.
+     *
+     * @param streamId Stream identifier to publish to.
+     * @param event    Event to publish.
+     * @throws EventStreamException If no junction exists for the stream or a consumer fails.
+     */
+    public void publishAndNotifyErrors(String streamId, Event event) throws EventStreamException {
+
+        int tenantId = initTenantContext();
+
+        Map<String, EventJunction> eventJunctionMap = tenantSpecificEventJunctions.get(tenantId);
+        if (eventJunctionMap == null || !eventJunctionMap.containsKey(streamId)) {
+            throw new EventStreamException(EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM.getCode(),
+                    EventStreamConstants.ErrorMessage.NO_JUNCTION_FOR_STREAM.formatMessage(streamId, tenantId));
+        }
+        eventJunctionMap.get(streamId).sendEventAndNotifyErrors(event);
+    }
+
+    private int initTenantContext() {
+        
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        if (tenantId != MultitenantConstants.SUPER_TENANT_ID) {
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(true);
+            TenantAxisUtils.getTenantConfigurationContext(tenantDomain, EventStreamServiceValueHolder.
+                    getConfigurationContextService().getServerConfigContext());
+        }
+        return tenantId;
     }
 
     public void subscribe(SiddhiEventConsumer siddhiEventConsumer) throws EventStreamConfigurationException {

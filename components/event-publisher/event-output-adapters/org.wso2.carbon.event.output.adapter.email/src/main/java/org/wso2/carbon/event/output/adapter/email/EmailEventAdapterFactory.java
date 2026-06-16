@@ -1,20 +1,21 @@
 /*
-*  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.event.output.adapter.email;
 
 import org.apache.commons.logging.Log;
@@ -163,10 +164,19 @@ public class EmailEventAdapterFactory extends OutputEventAdapterFactory {
         format.setDefaultValue(EmailEventAdapterConstants.MAIL_TEXT_PLAIN);
         format.setHint(resourceBundle.getString(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_TYPE_HINT));
 
+        //set sync mode of the email.
+        Property sync = new Property(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC);
+        sync.setDisplayName(resourceBundle.getString(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC));
+        sync.setRequired(false);
+        sync.setOptions(new String[]{Boolean.TRUE.toString(), Boolean.FALSE.toString()});
+        sync.setDefaultValue(Boolean.FALSE.toString());
+        sync.setHint(resourceBundle.getString(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC_HINT));
+        sync.setImplicit(true);
 
         dynamicPropertyList.add(emailAddress);
         dynamicPropertyList.add(subject);
         dynamicPropertyList.add(format);
+        dynamicPropertyList.add(sync);
 
         return dynamicPropertyList;
     }

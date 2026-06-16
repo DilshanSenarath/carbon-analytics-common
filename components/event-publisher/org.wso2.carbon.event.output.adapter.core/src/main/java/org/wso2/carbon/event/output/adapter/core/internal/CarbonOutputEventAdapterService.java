@@ -1,17 +1,21 @@
 /*
- * Copyright (c) 2005 - 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2005-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed
- * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.event.output.adapter.core.internal;
 
 import org.apache.commons.logging.Log;
@@ -150,9 +154,29 @@ public class CarbonOutputEventAdapterService implements OutputEventAdapterServic
     @Override
     public void publish(String name, Map<String, String> dynamicProperties, Object message) {
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        getRuntime(name, tenantId).publish(message, dynamicProperties);
+    }
+
+    @Override
+    public void publishSync(String name, Map<String, String> dynamicProperties, Object message)
+            throws OutputEventAdapterException {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        getRuntime(name, tenantId).publishSync(message, dynamicProperties);
+    }
+
+    @Override
+    public boolean isSync(String name, Map<String, String> dynamicProperties) {
+
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        return getRuntime(name, tenantId).isSync(dynamicProperties);
+    }
+
+    private OutputAdapterRuntime getRuntime(String name, int tenantId) {
+        
         ConcurrentHashMap<String, OutputAdapterRuntime> eventAdapters = tenantSpecificEventAdapters.get(tenantId);
         if (eventAdapters == null) {
-            throw new OutputEventAdapterRuntimeException("Event not published as no Output Event Adapter found with for" +
+            throw new OutputEventAdapterRuntimeException("Event not published as no Output Event Adapter found for" +
                     " tenant id " + tenantId);
         }
         OutputAdapterRuntime outputAdapterRuntime = eventAdapters.get(name);
@@ -160,7 +184,7 @@ public class CarbonOutputEventAdapterService implements OutputEventAdapterServic
             throw new OutputEventAdapterRuntimeException("Event not published as no Output Event Adapter found with name" +
                     " '" + name + "' for tenant id " + tenantId);
         }
-        outputAdapterRuntime.publish(message, dynamicProperties);
+        return outputAdapterRuntime;
     }
 
     /**

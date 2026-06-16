@@ -1,17 +1,21 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed
- * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.event.stream.core.internal.util;
 
 import org.wso2.carbon.databridge.commons.AttributeType;
@@ -62,5 +66,59 @@ public interface EventStreamConstants {
     public static final String EVENT_ATTRIBUTE_VALUE_SEPARATOR = ":";
     public static final String EVENT_ATTRIBUTE_SEPARATOR = ",";
 
+    /**
+     * Error messages for the event-stream error-propagation mechanism.
+     */
+    enum ErrorMessage {
 
+        CONSUMER_FAILURE(
+                "ES-65000",
+                "Consumer '%s' on stream '%s' failed."),
+
+        MULTIPLE_CONSUMERS_FAILED(
+                "ES-65002",
+                "%d consumer(s) failed to process the event."),
+
+        PRODUCER_PROPAGATION_NOT_IMPLEMENTED(
+                "ES-65003",
+                "sendEventAndNotifyErrors is not implemented for this producer."),
+
+        SERVICE_PUBLISH_NOT_IMPLEMENTED(
+                "ES-65004",
+                "publishAndNotifyErrors is not implemented for this service."),
+
+        NO_JUNCTION_FOR_STREAM(
+                "ES-65005",
+                "No junction found for stream '%s' on tenant %d; cannot deliver event.");
+
+        private final String code;
+        private final String message;
+
+        ErrorMessage(String code, String message) {
+
+            this.code = code;
+            this.message = message;
+        }
+
+        public String getCode() {
+
+            return code;
+        }
+
+        public String getMessage() {
+
+            return message;
+        }
+
+        public String formatMessage(Object... args) {
+
+            return String.format(message, args);
+        }
+
+        @Override
+        public String toString() {
+            
+            return code + " | " + message;
+        }
+    }
 }

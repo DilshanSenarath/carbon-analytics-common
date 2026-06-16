@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.event.output.adapter.email;
 
 import com.sun.mail.smtp.SMTPTransport;
@@ -34,6 +35,7 @@ import org.wso2.carbon.event.output.adapter.email.internal.util.EmailEventAdapte
 import org.wso2.carbon.event.output.adapter.email.internal.util.EmailEventAdapterUtil;
 import org.wso2.carbon.identity.secret.mgt.core.exception.SecretManagementException;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -346,6 +348,60 @@ public class EmailEventAdapter implements OutputEventAdapter {
     }
 
     @Override
+    public void connectSync() throws ConnectionUnavailableException {
+
+        connect();
+    }
+
+    @Override
+    public void disconnectSync() {
+
+        // No persistent transport to release.
+    }
+
+    @Override
+    public void publishSync(Object message, Map<String, String> dynamicProperties)
+            throws OutputEventAdapterException {
+
+        //Get subject and emailIds from dynamic properties
+        String subject = dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SUBJECT);
+        String emailAddress = dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_ADDRESS);
+        if (StringUtils.isBlank(emailAddress)) {
+            throw new OutputEventAdapterException(
+                    EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_MISSING_ADDRESS.getCode(),
+                    EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_MISSING_ADDRESS.getMessage());
+        }
+        String[] emailIds = emailAddress.replaceAll(" ", "").split(EmailEventAdapterConstants.EMAIL_SEPARATOR);
+        String emailType = dynamicProperties.get(EmailEventAdapterConstants.APAPTER_MESSAGE_EMAIL_TYPE);
+
+        //Send email for each emailId
+        for (String email : emailIds) {
+            if (log.isDebugEnabled()) {
+                log.debug("Attempting to send an email to " + email);
+            }
+            try {
+                buildAndSendEmail(email, subject, message.toString(), emailType);
+            } catch (UnsupportedEncodingException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_ENCODING_FAILED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_ENCODING_FAILED.formatMessage(email), e);
+            } catch (AuthenticationFailedException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_AUTH_FAILED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_AUTH_FAILED.formatMessage(email), e);
+            } catch (SendFailedException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_REJECTED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_REJECTED.formatMessage(email), e);
+            } catch (MessagingException e) {
+                throw new OutputEventAdapterException(
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.getCode(),
+                        EmailEventAdapterConstants.ErrorMessage.SYNC_EMAIL_SEND_FAILED.formatMessage(email), e);
+            }
+        }
+    }
+
+    @Override
     public void disconnect() {
         //not required
     }
@@ -358,6 +414,12 @@ public class EmailEventAdapter implements OutputEventAdapter {
     @Override
     public boolean isPolled() {
         return false;
+    }
+
+    @Override
+    public boolean isSync(Map<String, String> dynamicProperties) {
+        
+        return Boolean.parseBoolean(dynamicProperties.get(EmailEventAdapterConstants.ADAPTER_MESSAGE_EMAIL_SYNC));
     }
 
 
@@ -380,57 +442,63 @@ public class EmailEventAdapter implements OutputEventAdapter {
         @Override
         public void run() {
 
-            if (log.isDebugEnabled()) {
-                log.debug("Format of the email:" + " " + to + "->" + type);
-            }
-
-            //Creating MIME object using initiated session.
-            MimeMessage message = new MimeMessage(session);
-
-            //Setting up the Email attributes and Email payload.
             try {
-                if (signature != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Email Signature is configured as: " + signature);
-                    }
-                    message.setFrom(new InternetAddress(smtpFromAddress.getAddress(), signature));
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Email Signature is not configured.");
-                    }
-                    message.setFrom(smtpFromAddress);
-                }
-
-                if (smtpReplyToAddress != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Email reply to address is configured as: " + smtpReplyToAddress[0].getAddress());
-                    }
-                    message.setReplyTo(smtpReplyToAddress);
-                }
-
-                message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-                message.setSubject(subject);
-                message.setSentDate(new Date());
-                message.setContent(body, type);
-
-                if (log.isDebugEnabled()) {
-                    log.debug("Meta data of the email configured successfully");
-                }
-
-                // Sending the email using SMTP transport.
-                sendWithRetry(message);
-
-                if (log.isDebugEnabled()) {
-                    log.debug("Mail sent to the EmailID " + to + " Successfully");
-                }
+                buildAndSendEmail(to, subject, body, type);
             } catch (MessagingException e) {
-                LogMessagingException(e, to, 0);
-                EmailEventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), message,
+                logMessagingException(e, to, 0);
+                EmailEventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), body,
                         "Error in message format", e, log, tenantId);
             } catch (Exception e) {
-                EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), message,
+                EventAdapterUtil.logAndDrop(eventAdapterConfiguration.getName(), body,
                         "Error sending email to '" + to + "'", e, log, tenantId);
             }
+        }
+    }
+
+    private void buildAndSendEmail(String to, String subject, String body, String type)
+            throws MessagingException, UnsupportedEncodingException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Format of the email:" + " " + to + "->" + type);
+        }
+
+        //Creating MIME object using initiated session.
+        MimeMessage message = new MimeMessage(session);
+
+        //Setting up the Email attributes and Email payload.
+        if (signature != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Email Signature is configured as: " + signature);
+            }
+            message.setFrom(new InternetAddress(smtpFromAddress.getAddress(), signature));
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Email Signature is not configured.");
+            }
+            message.setFrom(smtpFromAddress);
+        }
+
+        if (smtpReplyToAddress != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Email reply to address is configured as: " + smtpReplyToAddress[0].getAddress());
+            }
+            message.setReplyTo(smtpReplyToAddress);
+        }
+
+        message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+        message.setSubject(subject);
+        message.setSentDate(new Date());
+        message.setContent(body, type);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Meta data of the email configured successfully");
+        }
+
+        // Sending the email using SMTP transport.
+        sendWithRetry(message);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Mail sent to the EmailID " + to + " Successfully");
         }
     }
 
@@ -441,7 +509,7 @@ public class EmailEventAdapter implements OutputEventAdapter {
         } catch (AuthenticationFailedException exception) {
             // Retry only for CLIENT_CREDENTIAL authentication type.
             if (!CLIENT_CREDENTIAL.equalsIgnoreCase(globalProperties.get(ADAPTER_EMAIL_AUTH_TYPE))) {
-                throw new AuthenticationFailedException();
+                throw exception;
             }
             if (log.isDebugEnabled()) {
                 log.debug("Authentication failed, attempting token refresh and retry...", exception);
@@ -486,7 +554,7 @@ public class EmailEventAdapter implements OutputEventAdapter {
         }
     }
 
-    private void LogMessagingException(MessagingException e, String mailRecipient, int recurseCount) {
+    private void logMessagingException(MessagingException e, String mailRecipient, int recurseCount) {
 
         if (e instanceof SendFailedException) {
             List<String> sentMails = new ArrayList<>();
@@ -536,7 +604,7 @@ public class EmailEventAdapter implements OutputEventAdapter {
         Exception nextEx = e.getNextException();
         if (nextEx instanceof MessagingException) {
             if (recurseCount < 10) {
-                LogMessagingException((MessagingException) nextEx, mailRecipient, recurseCount + 1);
+                logMessagingException((MessagingException) nextEx, mailRecipient, recurseCount + 1);
             } else {
                 log.warn("Over " + recurseCount + " chained exceptions found when logging MessagingExceptions. " +
                         "Stopping the exception check at this point.");

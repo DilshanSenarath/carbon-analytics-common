@@ -1,31 +1,32 @@
 /*
- *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016-2026, WSO2 LLC. (http://www.wso2.com).
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.event.publisher.core.internal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.databridge.commons.Attribute;
 import org.wso2.carbon.databridge.commons.Event;
 import org.wso2.carbon.databridge.commons.StreamDefinition;
+import org.wso2.carbon.event.output.adapter.core.OutputEventAdapterSchema;
 import org.wso2.carbon.event.output.adapter.core.OutputEventAdapterService;
+import org.wso2.carbon.event.output.adapter.core.Property;
 import org.wso2.carbon.event.output.adapter.core.exception.OutputEventAdapterException;
 import org.wso2.carbon.event.processor.manager.core.EventManagementUtil;
 import org.wso2.carbon.event.processor.manager.core.EventSync;
@@ -41,19 +42,22 @@ import org.wso2.carbon.event.publisher.core.internal.ds.EventPublisherServiceVal
 import org.wso2.carbon.event.publisher.core.internal.util.EventPublisherUtil;
 import org.wso2.carbon.event.stream.core.WSO2EventConsumer;
 import org.wso2.carbon.event.stream.core.exception.EventStreamConfigurationException;
+import org.wso2.carbon.event.stream.core.exception.EventStreamException;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 
 public class EventPublisher implements WSO2EventConsumer, EventSync {
 
     private static final Log log = LogFactory.getLog(EventPublisher.class);
-
     private final boolean traceEnabled;
     private final boolean statisticsEnabled;
     private final boolean processingEnabled;
@@ -67,6 +71,7 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
     private String beforeTracerPrefix;
     private String afterTracerPrefix;
     private boolean dynamicMessagePropertyEnabled = false;
+    private Set<String> implicitDynamicPropertyKeys = Collections.emptySet();
     private boolean customMappingEnabled = false;
     private boolean isPolled = false;
     private Mode mode = Mode.SingleNode;
@@ -130,6 +135,21 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
         if (dynamicMessagePropertyList.size() > 0) {
             dynamicMessagePropertyEnabled = true;
+        }
+
+        String adapterType = eventPublisherConfiguration.getToAdapterConfiguration().getType();
+        OutputEventAdapterSchema adapterSchema = EventPublisherServiceValueHolder
+                .getOutputEventAdapterService().getOutputEventAdapterSchema(adapterType);
+        if (adapterSchema != null && adapterSchema.getDynamicPropertyList() != null) {
+            Set<String> implicitKeys = new HashSet<>();
+            for (Property property : adapterSchema.getDynamicPropertyList()) {
+                if (property.isImplicit()) {
+                    implicitKeys.add(property.getPropertyName());
+                }
+            }
+            if (!implicitKeys.isEmpty()) {
+                implicitDynamicPropertyKeys = Collections.unmodifiableSet(implicitKeys);
+            }
         }
 
         try {
@@ -203,12 +223,25 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
     public void sendEvent(Event event) {
 
+        try {
+            dispatch(event, false);
+        } catch (EventStreamException e) {
+            // process() does not throw EventStreamException; this catch is unreachable.
+        }
+    }
+
+    private void dispatch(Event event, boolean notifyError) throws EventStreamException {
+        
         if (isPolled) {
             if (sendToOther) {
                 EventPublisherServiceValueHolder.getEventManagementService()
                         .syncEvent(syncId, Manager.ManagerType.Publisher, event);
             }
-            process(event);
+            if (notifyError) {
+                processAndNotifyErrors(event);
+            } else {
+                process(event);
+            }
         } else {
             if (!EventPublisherServiceValueHolder.getCarbonEventPublisherManagementService().isDrop()) {
                 if (mode == Mode.HA) {
@@ -220,14 +253,22 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
                         while (!eventQueue.isEmpty()) {
                             EventWrapper eventWrapper = eventQueue.poll();
                             if (eventWrapper.getTimestampInMillis() > lastProcessedTime) {
-                                process(eventWrapper.getEvent());
+                                if (notifyError) {
+                                    processAndNotifyErrors(eventWrapper.getEvent());
+                                } else {
+                                    process(eventWrapper.getEvent());
+                                }
                             }
                         }
                     }
                     EventPublisherServiceValueHolder.getEventManagementService().updateLatestEventSentTime(
                             eventPublisherConfiguration.getEventPublisherName(), tenantId, currentTime);
                 }
-                process(event);
+                if (notifyError) {
+                    processAndNotifyErrors(event);
+                } else {
+                    process(event);
+                }
             } else {
                 if (mode == Mode.HA) {
                     // Add to Queue.
@@ -310,6 +351,25 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 
     }
 
+    private void injectImplicitDynamicProperties(Event event, Map<String, String> dynamicProperties) {
+        
+        if (implicitDynamicPropertyKeys.isEmpty()) {
+            return;
+        }
+        Map<String, String> arbitraryDataMap = event.getArbitraryDataMap();
+        if (arbitraryDataMap == null || arbitraryDataMap.isEmpty()) {
+            return;
+        }
+        for (String key : implicitDynamicPropertyKeys) {
+            if (!dynamicProperties.containsKey(key) && arbitraryDataMap.containsKey(key)) {
+                String value = arbitraryDataMap.get(key);
+                if (value != null) {
+                    dynamicProperties.put(key, value);
+                }
+            }
+        }
+    }
+
     private List<String> getDynamicOutputMessageProperties(String messagePropertyValue) {
         String text = messagePropertyValue;
         while (text.contains("{{") && text.indexOf("}}") > 0) {
@@ -374,37 +434,15 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
         Map<String, String> dynamicProperties = new HashMap<String, String>(eventPublisherConfiguration.getToAdapterDynamicProperties());
         Object outObject;
 
-        if (traceEnabled) {
-            trace.info(beforeTracerPrefix + event);
-        }
-        if (statisticsEnabled) {
-        }
-
-        if (!processingEnabled) {
-            return;
-
-        }
-
-        EventPublisherUtil.populateUrlPlaceholders(dynamicProperties, event.getArbitraryDataMap());
-        org.wso2.siddhi.core.event.Event siddhiEvent = EventPublisherUtil.convertToSiddhiEvent(event, inputStreamSize);
-
         try {
-            if (customMappingEnabled) {
-                outObject = outputMapper.convertToMappedInputEvent(siddhiEvent);
-            } else {
-                outObject = outputMapper.convertToTypedInputEvent(siddhiEvent);
-            }
+            outObject = buildOutputMessage(event, dynamicProperties);
         } catch (EventPublisherConfigurationException e) {
             log.error("Cannot send " + event + " from " + eventPublisherConfiguration.getEventPublisherName(), e);
             return;
         }
 
-        if (traceEnabled) {
-            trace.info(afterTracerPrefix + outObject);
-        }
-
-        if (dynamicMessagePropertyEnabled) {
-            changeDynamicEventAdapterMessageProperties(siddhiEvent.getData(), dynamicProperties, siddhiEvent.getArbitraryDataMap());
+        if (outObject == null) {
+            return;
         }
 
         OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
@@ -426,7 +464,86 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
 //        }
 
 
+        injectImplicitDynamicProperties(event, dynamicProperties);
         eventAdapterService.publish(eventPublisherConfiguration.getEventPublisherName(), dynamicProperties, outObject);
+    }
+
+    @Override
+    public void onEventAndNotifyErrors(Event event) throws EventStreamException {
+
+        sendEventAndNotifyErrors(event);
+    }
+
+    private void sendEventAndNotifyErrors(Event event) throws EventStreamException {
+
+        dispatch(event, true);
+    }
+
+    private void processAndNotifyErrors(Event event) throws EventStreamException {
+
+        Map<String, String> dynamicProperties = new HashMap<String, String>(
+                eventPublisherConfiguration.getToAdapterDynamicProperties());
+        Object outObject;
+
+        try {
+            outObject = buildOutputMessage(event, dynamicProperties);
+        } catch (EventPublisherConfigurationException e) {
+            throw new EventStreamException(EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED.getCode(),
+                    EventPublisherConstants.ErrorMessage.EVENT_MAPPING_FAILED
+                            .formatMessage(eventPublisherConfiguration.getEventPublisherName()), e);
+        }
+
+        if (outObject == null) {
+            return;
+        }
+
+        injectImplicitDynamicProperties(event, dynamicProperties);
+        OutputEventAdapterService eventAdapterService = EventPublisherServiceValueHolder.getOutputEventAdapterService();
+        String publisherName = eventPublisherConfiguration.getEventPublisherName();
+        if (eventAdapterService.isSync(publisherName, dynamicProperties)) {
+            try {
+                eventAdapterService.publishSync(publisherName, dynamicProperties, outObject);
+            } catch (OutputEventAdapterException e) {
+                throw new EventStreamException(EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.getCode(), 
+                    EventPublisherConstants.ErrorMessage.SYNC_DELIVERY_FAILED.formatMessage(publisherName), e);
+            }
+        } else {
+            eventAdapterService.publish(publisherName, dynamicProperties, outObject);
+        }
+    }
+
+    private Object buildOutputMessage(Event event, Map<String, String> dynamicProperties)
+            throws EventPublisherConfigurationException {
+
+        if (traceEnabled) {
+            trace.info(beforeTracerPrefix + event);
+        }
+        if (statisticsEnabled) {
+        }
+
+        if (!processingEnabled) {
+            return null;
+        }
+
+        EventPublisherUtil.populateUrlPlaceholders(dynamicProperties, event.getArbitraryDataMap());
+        org.wso2.siddhi.core.event.Event siddhiEvent = EventPublisherUtil.convertToSiddhiEvent(event, inputStreamSize);
+
+        Object outObject;
+        if (customMappingEnabled) {
+            outObject = outputMapper.convertToMappedInputEvent(siddhiEvent);
+        } else {
+            outObject = outputMapper.convertToTypedInputEvent(siddhiEvent);
+        }
+
+        if (traceEnabled) {
+            trace.info(afterTracerPrefix + outObject);
+        }
+
+        if (dynamicMessagePropertyEnabled) {
+            changeDynamicEventAdapterMessageProperties(siddhiEvent.getData(), dynamicProperties, siddhiEvent.getArbitraryDataMap());
+        }
+
+        return outObject;
     }
 
     @Override
