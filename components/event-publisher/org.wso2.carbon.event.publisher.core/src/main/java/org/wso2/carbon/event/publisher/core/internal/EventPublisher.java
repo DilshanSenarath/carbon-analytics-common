@@ -361,11 +361,9 @@ public class EventPublisher implements WSO2EventConsumer, EventSync {
             return;
         }
         for (String key : implicitDynamicPropertyKeys) {
-            if (!dynamicProperties.containsKey(key) && arbitraryDataMap.containsKey(key)) {
-                String value = arbitraryDataMap.get(key);
-                if (value != null) {
-                    dynamicProperties.put(key, value);
-                }
+            String value = arbitraryDataMap.get(key);
+            if (value != null) {
+                dynamicProperties.put(key, value);
             }
         }
     }
